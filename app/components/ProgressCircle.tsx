@@ -25,7 +25,7 @@ export default function ProgressCircle({
     <View style={styles.container}>
       <Svg width={size} height={size}>
         <Circle
-          stroke={theme.colors.progressBg}
+          stroke={theme.colors.surfaceVariant}
           fill="none"
           strokeWidth={strokeWidth}
           cx={size / 2}
@@ -33,7 +33,7 @@ export default function ProgressCircle({
           r={radius}
         />
         <Circle
-          stroke={color || theme.colors.accent}
+          stroke={color || theme.colors.primary}
           fill="none"
           strokeWidth={strokeWidth}
           cx={size / 2}

@@ -1,12 +1,12 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { useTheme, Text, Card, Button, FAB, Portal, IconButton } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { useTheme, Text, IconButton, Surface } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, isToday, differenceInDays } from 'date-fns';
 import { BibleReading, ReadingStreak } from './types';
-import AddReadingModal from './components/AddReadingModal';
-import * as Notifications from 'expo-notifications';
+import AddReadingDrawer from './components/AddReadingDrawer';
+import ProgressCircle from './components/ProgressCircle';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -20,7 +20,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadData();
-    scheduleReminder();
   }, []);
 
   async function loadData() {
@@ -37,23 +36,6 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading data:', error);
     }
-  }
-
-  async function scheduleReminder() {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Time for Bible Reading! 📖",
-        body: "Don't forget to read your daily Bible chapter and maintain your streak!",
-      },
-      trigger: {
-        hour: 9, // 9 AM
-        minute: 0,
-        repeats: true,
-        type: 'calendar',
-      },
-    });
   }
 
   const updateStreak = (newReading: BibleReading) => {
@@ -110,90 +92,271 @@ export default function HomeScreen() {
       backgroundColor: theme.colors.background,
     },
     content: {
-      padding: 16,
+      flex: 1,
     },
-    streakCard: {
-      marginBottom: 16,
-      backgroundColor: theme.colors.surface,
-    },
-    streakText: {
-      fontSize: 48,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      color: theme.colors.primary,
-    },
-    streakLabel: {
-      fontSize: 16,
-      textAlign: 'center',
-      color: theme.colors.secondary,
-      marginTop: 8,
-    },
-    readingCard: {
-      marginBottom: 12,
-      backgroundColor: theme.colors.surface,
-    },
-    fab: {
-      position: 'absolute',
-      margin: 16,
-      right: 0,
-      bottom: 0,
-      backgroundColor: theme.colors.primary,
-    },
-    cardHeader: {
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 12,
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    tabs: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      gap: 24,
+    },
+    tab: {
+      paddingVertical: 4,
+    },
+    tabText: {
+      fontSize: 16,
+      color: theme.colors.secondary,
+    },
+    activeTab: {
+      borderBottomWidth: 2,
+      borderBottomColor: theme.colors.primary,
+    },
+    activeTabText: {
+      color: theme.colors.primary,
+    },
+    statsCard: {
+      margin: 20,
+      padding: 20,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.roundness,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 1,
+      shadowRadius: 20,
+      elevation: 5,
+    },
+    mainStat: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      marginBottom: 40,
+    },
+    mainStatContent: {
+      flex: 1,
+    },
+    mainStatValue: {
+      fontSize: 72,
+      fontWeight: '700',
+      color: theme.colors.primary,
+      marginBottom: 4,
+      letterSpacing: -2,
+    },
+    mainStatLabel: {
+      fontSize: 15,
+      color: theme.colors.secondary,
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 20,
+    },
+    statItem: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      padding: 16,
+      borderRadius: theme.roundness - 4,
+      alignItems: 'flex-start',
+    },
+    statValue: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: theme.colors.primary,
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: 13,
+      color: theme.colors.secondary,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.primary,
+      marginHorizontal: 20,
+      marginBottom: 12,
+      marginTop: 20,
+    },
+    readingCard: {
+      marginHorizontal: 20,
+      marginBottom: 12,
+      padding: 16,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.roundness,
+      flexDirection: 'row',
+      alignItems: 'center',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 1,
+      shadowRadius: 20,
+      elevation: 5,
+    },
+    readingInfo: {
+      flex: 1,
+    },
+    readingTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.primary,
+      marginBottom: 4,
+    },
+    readingMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    readingMetaText: {
+      fontSize: 13,
+      color: theme.colors.secondary,
+    },
+    readingTime: {
+      fontSize: 13,
+      color: theme.colors.secondary,
+      marginLeft: 'auto',
+    },
+    bottomNav: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingTop: 4,
+      paddingBottom: 28,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.outline,
+      backgroundColor: theme.colors.background,
+      height: 72,
+      paddingHorizontal: 16,
+    },
+    navItem: {
+      alignItems: 'center',
+      opacity: 0.5,
+      flex: 1,
+    },
+    navItemActive: {
+      opacity: 1,
+    },
+    navLabel: {
+      fontSize: 12,
+      color: theme.colors.primary,
+      marginTop: -4,
+    },
+    addButton: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: theme.dark ? '#FFFFFF' : '#000000',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+      marginTop: -32,
+    },
+    addButtonContainer: {
+      flex: 1,
       alignItems: 'center',
     },
   });
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Bible AI</Text>
+      </View>
+
+      <View style={styles.tabs}>
+        <Pressable style={[styles.tab, styles.activeTab]}>
+          <Text style={[styles.tabText, styles.activeTabText]}>Today</Text>
+        </Pressable>
+        <Pressable style={styles.tab}>
+          <Text style={styles.tabText}>Yesterday</Text>
+        </Pressable>
+      </View>
+
       <ScrollView style={styles.content}>
-        <Card style={styles.streakCard}>
-          <Card.Content>
-            <Text style={styles.streakText}>{streak.currentStreak}</Text>
-            <Text style={styles.streakLabel}>Day Streak</Text>
-            <Text style={styles.streakLabel}>
-              Total Days Read: {streak.totalDaysRead}
-            </Text>
-          </Card.Content>
-        </Card>
+        <Surface style={styles.statsCard}>
+          <View style={styles.mainStat}>
+            <View style={styles.mainStatContent}>
+              <Text style={styles.mainStatValue}>0</Text>
+              <Text style={styles.mainStatLabel}>Chapters left</Text>
+            </View>
+            <ProgressCircle progress={0.7} size={56} strokeWidth={2} color={theme.colors.primary} />
+          </View>
+          <View style={styles.statsGrid}>
+            <View style={styles.statItem}>
+              <ProgressCircle progress={0.7} size={32} strokeWidth={1.5} color={theme.colors.error} />
+              <Text style={styles.statValue}>0g</Text>
+              <Text style={styles.statLabel}>Old Testament</Text>
+            </View>
+            <View style={styles.statItem}>
+              <ProgressCircle progress={0.45} size={32} strokeWidth={1.5} color={theme.colors.tertiary} />
+              <Text style={styles.statValue}>89g</Text>
+              <Text style={styles.statLabel}>New Testament</Text>
+            </View>
+            <View style={styles.statItem}>
+              <ProgressCircle progress={0.3} size={32} strokeWidth={1.5} color={theme.colors.secondary} />
+              <Text style={styles.statValue}>48g</Text>
+              <Text style={styles.statLabel}>Psalms</Text>
+            </View>
+          </View>
+        </Surface>
+
+        <Text style={styles.sectionTitle}>Recently read</Text>
 
         {readings.map((reading) => (
-          <Card key={reading.id} style={styles.readingCard}>
-            <Card.Content>
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text variant="titleMedium">
-                    {reading.book} Chapter {reading.chapter}
-                  </Text>
-                  <Text variant="bodyMedium">
-                    {format(new Date(reading.date), 'MMMM d, yyyy')}
+          <Surface key={reading.id} style={styles.readingCard}>
+            <View style={styles.readingInfo}>
+              <Text style={styles.readingTitle}>
+                {reading.book} {reading.chapter}
+              </Text>
+              {reading.notes && (
+                <View style={styles.readingMeta}>
+                  <Text style={styles.readingMetaText} numberOfLines={1}>
+                    {reading.notes}
                   </Text>
                 </View>
-                <IconButton
-                  icon="delete"
-                  size={20}
-                  onPress={() => handleDeleteReading(reading.id)}
-                />
-              </View>
-              {reading.notes && (
-                <Text variant="bodySmall" style={{ marginTop: 8 }}>
-                  {reading.notes}
-                </Text>
               )}
-            </Card.Content>
-          </Card>
+            </View>
+            <Text style={styles.readingTime}>
+              {format(new Date(reading.date), 'h:mma')}
+            </Text>
+          </Surface>
         ))}
       </ScrollView>
 
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}
-      />
+      <View style={styles.bottomNav}>
+        <Pressable style={[styles.navItem, styles.navItemActive]}>
+          <IconButton icon="home-outline" size={24} iconColor={theme.colors.primary} style={{ margin: 0 }} />
+          <Text style={styles.navLabel}>Home</Text>
+        </Pressable>
+        <Pressable style={styles.navItem}>
+          <IconButton icon="chart-line" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
+          <Text style={styles.navLabel}>Analytics</Text>
+        </Pressable>
+        <Pressable style={styles.navItem}>
+          <IconButton icon="cog-outline" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
+          <Text style={styles.navLabel}>Settings</Text>
+        </Pressable>
+        <View style={styles.addButtonContainer}>
+          <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
+            <IconButton icon="plus" size={32} iconColor={theme.dark ? '#000000' : '#FFFFFF'} />
+          </Pressable>
+        </View>
+      </View>
 
-      <AddReadingModal
+      <AddReadingDrawer
         visible={modalVisible}
         onDismiss={() => setModalVisible(false)}
         onSave={handleAddReading}

@@ -5,21 +5,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, StyleSheet } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { lightTheme, darkTheme } from './theme';
-import * as Notifications from 'expo-notifications';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -35,35 +27,27 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  useEffect(() => {
-    async function requestPermissions() {
-      await Notifications.requestPermissionsAsync();
-    }
-    requestPermissions();
-  }, []);
-
   if (!loaded) {
     return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <PaperProvider theme={theme}>
-        <Stack>
-          <Stack.Screen
-            name="index"
-            options={{
-              title: 'Bible Habit',
-              headerStyle: {
-                backgroundColor: theme.colors.primary,
-              },
-              headerTintColor: theme.colors.surface,
-            }}
-          />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </PaperProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={styles.container}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <PaperProvider theme={theme}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </PaperProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

@@ -1,12 +1,15 @@
-import { View, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Platform, Dimensions } from 'react-native';
 import { useTheme, Text, IconButton, Surface } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format, isToday, differenceInDays } from 'date-fns';
+import { format, isToday, differenceInDays, subDays, addDays } from 'date-fns';
 import { BibleReading, ReadingStreak } from './types';
 import AddReadingDrawer from './components/AddReadingDrawer';
 import ProgressCircle from './components/ProgressCircle';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DAYS_TO_SHOW = 7; // Number of days to show in the carousel
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -17,10 +20,47 @@ export default function HomeScreen() {
     totalDaysRead: 0,
   });
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentIndex, setCurrentIndex] = useState(DAYS_TO_SHOW - 1); // Start with today (last item)
+  const horizontalScrollViewRef = useRef<ScrollView>(null);
+
+  // Generate dates for the carousel (today and previous days)
+  const dates = Array.from({ length: DAYS_TO_SHOW }, (_, i) => 
+    subDays(new Date(), DAYS_TO_SHOW - 1 - i)
+  );
 
   useEffect(() => {
     loadData();
+    // Scroll to today (last item) on initial render
+    setTimeout(() => {
+      scrollToIndex(DAYS_TO_SHOW - 1);
+    }, 100);
   }, []);
+
+  const scrollToIndex = (index: number) => {
+    if (horizontalScrollViewRef.current) {
+      horizontalScrollViewRef.current.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
+      setCurrentIndex(index);
+      setSelectedDate(dates[index]);
+    }
+  };
+
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SCREEN_WIDTH);
+    
+    if (index !== currentIndex) {
+      setCurrentIndex(index);
+      setSelectedDate(dates[index]);
+    }
+  };
+
+  // Function to navigate to a specific date
+  const goToDate = (index: number) => {
+    if (index >= 0 && index < DAYS_TO_SHOW) {
+      scrollToIndex(index);
+    }
+  };
 
   async function loadData() {
     try {
@@ -86,13 +126,99 @@ export default function HomeScreen() {
     }
   };
 
+  // Filter readings based on selected date
+  const getFilteredReadings = (date: Date) => {
+    return readings.filter(reading => {
+      const readingDate = new Date(reading.date);
+      return (
+        readingDate.getDate() === date.getDate() &&
+        readingDate.getMonth() === date.getMonth() &&
+        readingDate.getFullYear() === date.getFullYear()
+      );
+    });
+  };
+
+  const renderDatePage = (date: Date, index: number) => {
+    const dateReadings = getFilteredReadings(date);
+    
+    return (
+      <View key={index} style={styles.pageContainer}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.pageScrollContent}
+        >
+          <Text style={styles.dateHeader}>
+            {isToday(date) ? 'Today' : format(date, 'EEEE, MMMM d')}
+          </Text>
+
+          <Surface style={styles.statsCard}>
+            <View style={styles.mainStat}>
+              <View style={styles.mainStatContent}>
+                <Text style={styles.mainStatValue}>0</Text>
+                <Text style={styles.mainStatLabel}>Chapters left</Text>
+              </View>
+              <ProgressCircle progress={0.7} size={56} strokeWidth={2} color={theme.colors.primary} />
+            </View>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <ProgressCircle progress={0.7} size={32} strokeWidth={1.5} color={theme.colors.error} />
+                <Text style={styles.statValue}>0g</Text>
+                <Text style={styles.statLabel}>Old Testament</Text>
+              </View>
+              <View style={styles.statItem}>
+                <ProgressCircle progress={0.45} size={32} strokeWidth={1.5} color={theme.colors.tertiary} />
+                <Text style={styles.statValue}>89g</Text>
+                <Text style={styles.statLabel}>New Testament</Text>
+              </View>
+              <View style={styles.statItem}>
+                <ProgressCircle progress={0.3} size={32} strokeWidth={1.5} color={theme.colors.secondary} />
+                <Text style={styles.statValue}>48g</Text>
+                <Text style={styles.statLabel}>Psalms</Text>
+              </View>
+            </View>
+          </Surface>
+
+          <Text style={styles.sectionTitle}>
+            {isToday(date) ? 'Today\'s readings' : `Readings for ${format(date, 'MMM d')}`}
+          </Text>
+
+          {dateReadings.length > 0 ? (
+            dateReadings.map((reading) => (
+              <Surface key={reading.id} style={styles.readingCard}>
+                <View style={styles.readingInfo}>
+                  <Text style={styles.readingTitle}>
+                    {reading.book} {reading.chapter}
+                  </Text>
+                  {reading.notes && (
+                    <View style={styles.readingMeta}>
+                      <Text style={styles.readingMetaText} numberOfLines={1}>
+                        {reading.notes}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.readingTime}>
+                  {format(new Date(reading.date), 'h:mma')}
+                </Text>
+              </Surface>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No readings for this day</Text>
+            </View>
+          )}
+          
+          {/* Add some bottom padding to ensure content doesn't get cut off */}
+          <View style={styles.pageBottomPadding} />
+        </ScrollView>
+      </View>
+    );
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
-    },
-    content: {
-      flex: 1,
     },
     header: {
       paddingHorizontal: 20,
@@ -107,28 +233,25 @@ export default function HomeScreen() {
       fontWeight: '600',
       color: theme.colors.primary,
     },
-    tabs: {
-      flexDirection: 'row',
+    pageContainer: {
+      width: SCREEN_WIDTH,
+      height: '100%',
+    },
+    pageScrollContent: {
       paddingHorizontal: 20,
-      paddingVertical: 8,
-      gap: 24,
+      paddingTop: 20,
     },
-    tab: {
-      paddingVertical: 4,
+    pageBottomPadding: {
+      height: 40,
     },
-    tabText: {
-      fontSize: 16,
-      color: theme.colors.secondary,
-    },
-    activeTab: {
-      borderBottomWidth: 2,
-      borderBottomColor: theme.colors.primary,
-    },
-    activeTabText: {
+    dateHeader: {
+      fontSize: 24,
+      fontWeight: '700',
       color: theme.colors.primary,
+      marginBottom: 16,
     },
     statsCard: {
-      margin: 20,
+      marginBottom: 20,
       padding: 20,
       backgroundColor: theme.colors.surface,
       borderRadius: theme.roundness,
@@ -185,12 +308,9 @@ export default function HomeScreen() {
       fontSize: 15,
       fontWeight: '600',
       color: theme.colors.primary,
-      marginHorizontal: 20,
       marginBottom: 12,
-      marginTop: 20,
     },
     readingCard: {
-      marginHorizontal: 20,
       marginBottom: 12,
       padding: 16,
       backgroundColor: theme.colors.surface,
@@ -231,7 +351,7 @@ export default function HomeScreen() {
       justifyContent: 'space-between',
       paddingTop: 4,
       paddingBottom: 28,
-      borderTopWidth: 1,
+      borderTopWidth: 0,
       borderTopColor: theme.colors.outline,
       backgroundColor: theme.colors.background,
       height: 72,
@@ -268,6 +388,14 @@ export default function HomeScreen() {
       flex: 1,
       alignItems: 'center',
     },
+    emptyState: {
+      paddingVertical: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      color: theme.colors.secondary,
+    },
   });
 
   return (
@@ -276,64 +404,18 @@ export default function HomeScreen() {
         <Text style={styles.headerTitle}>Bible AI</Text>
       </View>
 
-      <View style={styles.tabs}>
-        <Pressable style={[styles.tab, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Today</Text>
-        </Pressable>
-        <Pressable style={styles.tab}>
-          <Text style={styles.tabText}>Yesterday</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView style={styles.content}>
-        <Surface style={styles.statsCard}>
-          <View style={styles.mainStat}>
-            <View style={styles.mainStatContent}>
-              <Text style={styles.mainStatValue}>0</Text>
-              <Text style={styles.mainStatLabel}>Chapters left</Text>
-            </View>
-            <ProgressCircle progress={0.7} size={56} strokeWidth={2} color={theme.colors.primary} />
-          </View>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <ProgressCircle progress={0.7} size={32} strokeWidth={1.5} color={theme.colors.error} />
-              <Text style={styles.statValue}>0g</Text>
-              <Text style={styles.statLabel}>Old Testament</Text>
-            </View>
-            <View style={styles.statItem}>
-              <ProgressCircle progress={0.45} size={32} strokeWidth={1.5} color={theme.colors.tertiary} />
-              <Text style={styles.statValue}>89g</Text>
-              <Text style={styles.statLabel}>New Testament</Text>
-            </View>
-            <View style={styles.statItem}>
-              <ProgressCircle progress={0.3} size={32} strokeWidth={1.5} color={theme.colors.secondary} />
-              <Text style={styles.statValue}>48g</Text>
-              <Text style={styles.statLabel}>Psalms</Text>
-            </View>
-          </View>
-        </Surface>
-
-        <Text style={styles.sectionTitle}>Recently read</Text>
-
-        {readings.map((reading) => (
-          <Surface key={reading.id} style={styles.readingCard}>
-            <View style={styles.readingInfo}>
-              <Text style={styles.readingTitle}>
-                {reading.book} {reading.chapter}
-              </Text>
-              {reading.notes && (
-                <View style={styles.readingMeta}>
-                  <Text style={styles.readingMetaText} numberOfLines={1}>
-                    {reading.notes}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.readingTime}>
-              {format(new Date(reading.date), 'h:mma')}
-            </Text>
-          </Surface>
-        ))}
+      {/* Full Page Carousel */}
+      <ScrollView
+        ref={horizontalScrollViewRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        style={{ flex: 1 }}
+      >
+        {dates.map((date, index) => renderDatePage(date, index))}
       </ScrollView>
 
       <View style={styles.bottomNav}>

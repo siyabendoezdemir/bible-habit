@@ -46,6 +46,7 @@ export const lightTheme = {
       start: '#FFFFFF',
       end: '#F9F6F1',
     },
+    tertiary: '#3498DB',   // Added for the New Testament progress
   },
   roundness: 16,
 };
@@ -74,6 +75,7 @@ export const darkTheme = {
       start: '#22272E',
       end: '#1A1F25',
     },
+    tertiary: '#3498DB',   // Added for the New Testament progress
   },
   roundness: 16,
 }; 

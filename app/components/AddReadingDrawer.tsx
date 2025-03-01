@@ -79,6 +79,7 @@ export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddRead
   return (
     <BottomSheet
       ref={bottomSheetRef}
+      index={visible ? 0 : -1}
       snapPoints={snapPoints}
       enablePanDownToClose
       onClose={onDismiss}

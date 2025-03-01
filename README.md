@@ -1,8 +1,8 @@
-# Welcome to your Expo app 👋
+# Bible Habit App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile application built with Expo and React Native for Bible reading, tracking, and exploration.
 
-## Get started
+## Getting Started
 
 1. Install dependencies
 
@@ -16,14 +16,96 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
     npx expo start
    ```
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+In the output, you'll find options to open the app in a:
+- [Development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Expo Go](https://expo.dev/go)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Project Structure
+
+### Root Structure
+```
+bible-habit/
+├── app/                  # Main application code with file-based routing
+├── assets/               # Static assets like images and fonts
+├── components/           # Reusable UI components
+├── constants/            # App-wide constants
+├── hooks/                # Custom React hooks
+├── scripts/              # Utility scripts
+├── app.json              # Expo configuration
+├── package.json          # Dependencies and scripts
+└── tsconfig.json         # TypeScript configuration
+```
+
+### App Directory Structure
+```
+app/
+├── (tabs)/               # Tab-based navigation
+│   ├── _layout.tsx       # Tab layout configuration
+│   ├── index.tsx         # Home tab
+│   ├── bible.tsx         # Bible tab
+│   └── explore.tsx       # Explore tab
+├── _layout.tsx           # Main app layout
+├── index.tsx             # Main entry point
+├── analytics.tsx         # Analytics page
+├── bible.tsx             # Bible page
+├── +not-found.tsx        # 404 page
+├── components/           # App-specific components
+├── constants/            # App-specific constants
+├── theme/                # Theming configuration
+└── types/                # TypeScript type definitions
+```
+
+### Components Structure
+```
+components/
+├── ui/                   # UI components
+├── Collapsible.tsx       # Collapsible component
+├── ExternalLink.tsx      # External link component
+├── HapticTab.tsx         # Tab with haptic feedback
+├── HelloWave.tsx         # Wave animation component
+├── ParallaxScrollView.tsx # Parallax scrolling component
+├── ThemedText.tsx        # Themed text component
+└── ThemedView.tsx        # Themed view component
+```
+
+### Key Features
+- **Tab-based Navigation**: Home, Explore, and Bible tabs
+- **Theme Support**: Light and dark mode with custom colors
+- **Haptic Feedback**: Enhanced user experience with haptic feedback
+- **Responsive UI**: Adapts to different screen sizes and orientations
+
+## Technology Stack
+
+- **Framework**: [Expo](https://expo.dev) with [Expo Router](https://docs.expo.dev/router/introduction)
+- **UI Libraries**: 
+  - React Native Paper
+  - React Native Elements
+  - Expo Blur
+  - Expo Symbols
+- **State Management**: React hooks and context
+- **Navigation**: Expo Router (file-based)
+- **Charts**: React Native Chart Kit
+- **Animations**: React Native Reanimated
+- **Gestures**: React Native Gesture Handler
+- **Storage**: AsyncStorage
+
+## Development
+
+The app uses Expo's file-based routing system. The main navigation is handled through the tab layout in `app/(tabs)/_layout.tsx`.
+
+Key development files:
+- `app/(tabs)/index.tsx`: Home screen
+- `app/(tabs)/bible.tsx`: Bible reading screen
+- `app/(tabs)/explore.tsx`: Explore content screen
+- `components/ui/`: UI components used throughout the app
+
+## Learn More
+
+- [Expo documentation](https://docs.expo.dev/)
+- [React Native documentation](https://reactnative.dev/docs/getting-started)
+- [Expo Router documentation](https://docs.expo.dev/router/introduction)
 
 ## Get a fresh project
 
@@ -34,13 +116,6 @@ npm run reset-project
 ```
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
 ## Join the community
 

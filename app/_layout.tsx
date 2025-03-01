@@ -35,7 +35,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.container}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <PaperProvider theme={theme}>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ 
+            headerShown: false,
+            animationTypeForReplace: 'pop',
+            gestureEnabled: false,
+            animation: 'default'
+          }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="+not-found" />
           </Stack>

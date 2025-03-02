@@ -7,7 +7,9 @@ import { BibleReading, ReadingStreak } from './types';
 import AddReadingDrawer from './components/AddReadingDrawer';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AppLayout from './components/AppLayout';
-import { DatePage } from './components/home';
+import { Header, Footer, DateCarousel, DatePage } from './components/home';
+import * as ReadingStorage from './utils/readingStorage';
+import * as BibleDataUtils from './utils/bibleDataUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAYS_TO_SHOW = 7; // Number of days to show in the carousel
@@ -17,6 +19,16 @@ const TOTAL_CHAPTERS = 1189;
 const TOTAL_OT_CHAPTERS = 929;
 const TOTAL_NT_CHAPTERS = 260;
 const TOTAL_PSALMS = 150;
+
+// Ensure BibleReading type is compatible with the one used in AddReadingDrawer
+type AddReadingType = {
+  id: string;
+  book: string;
+  chapter: number;
+  date: string;
+  completed: boolean;
+  notes: string;
+};
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -102,67 +114,41 @@ export default function HomeScreen() {
   };
 
   async function loadData() {
-    try {
-      const storedReadings = await AsyncStorage.getItem('readings');
-      const storedStreak = await AsyncStorage.getItem('streak');
-      
-      if (storedReadings) {
-        setReadings(JSON.parse(storedReadings));
-      }
-      if (storedStreak) {
-        setStreak(JSON.parse(storedStreak));
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    }
+    const data = await ReadingStorage.loadData();
+    setReadings(data.readings);
+    setStreak(data.streak);
   }
 
-  const updateStreak = (newReading: BibleReading) => {
-    const newStreak = { ...streak };
-    const today = new Date().toISOString().split('T')[0];
-
-    if (!streak.lastReadDate) {
-      newStreak.currentStreak = 1;
-      newStreak.totalDaysRead = 1;
-    } else {
-      const lastDate = new Date(streak.lastReadDate);
-      const daysDiff = differenceInDays(new Date(), lastDate);
-
-      if (daysDiff <= 1) {
-        newStreak.currentStreak += 1;
-      } else {
-        newStreak.currentStreak = 1;
-      }
-      newStreak.totalDaysRead += 1;
-    }
-
-    newStreak.lastReadDate = today;
-    return newStreak;
-  };
-
-  const handleAddReading = async (newReading: BibleReading) => {
-    const updatedReadings = [newReading, ...readings];
-    const updatedStreak = updateStreak(newReading);
-
-    try {
-      await AsyncStorage.setItem('readings', JSON.stringify(updatedReadings));
-      await AsyncStorage.setItem('streak', JSON.stringify(updatedStreak));
-      
-      setReadings(updatedReadings);
-      setStreak(updatedStreak);
-    } catch (error) {
-      console.error('Error saving data:', error);
-    }
+  const handleAddReading = async (newReading: any) => {
+    // Ensure notes is defined
+    const readingToAdd: BibleReading = {
+      id: newReading.id,
+      book: newReading.book,
+      chapter: newReading.chapter,
+      date: newReading.date,
+      completed: newReading.completed,
+      notes: newReading.notes || ''
+    };
+    
+    const result = await ReadingStorage.addReading(readings, streak, readingToAdd);
+    setReadings(result.readings);
+    setStreak(result.streak);
   };
 
   const handleDeleteReading = async (id: string) => {
-    const updatedReadings = readings.filter(reading => reading.id !== id);
-    try {
-      await AsyncStorage.setItem('readings', JSON.stringify(updatedReadings));
-      setReadings(updatedReadings);
-    } catch (error) {
-      console.error('Error deleting reading:', error);
-    }
+    const updatedReadings = await ReadingStorage.deleteReading(readings, id);
+    setReadings(updatedReadings);
+  };
+
+  // Get chapters left to read today
+  const getChaptersLeftToday = () => {
+    const todayReadings = ReadingStorage.getFilteredReadings(readings, new Date());
+    return BibleDataUtils.getChaptersLeftToday(todayReadings);
+  };
+
+  // Handle date change in the carousel
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
   };
 
   // Filter readings based on selected date
@@ -216,13 +202,6 @@ export default function HomeScreen() {
     return getTotalChaptersRead() / TOTAL_CHAPTERS;
   };
 
-  // Get chapters left to read today based on a goal of 3 chapters per day
-  const getChaptersLeftToday = () => {
-    const todayReadings = getFilteredReadings(new Date()).length;
-    const dailyGoal = 3; // This could be a user setting
-    return Math.max(0, dailyGoal - todayReadings);
-  };
-
   // Get a verse of the day (this would be from an API in a real implementation)
   const getDailyVerse = () => {
     return {
@@ -262,111 +241,24 @@ export default function HomeScreen() {
     );
   };
 
-  // Create header component
-  const Header = (
-    <View style={styles.header}>
-      <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>Bible Habit</Text>
-      <View style={[styles.streakBadge, { backgroundColor: theme.colors.primary }]}>
-        <IconButton 
-          icon="fire" 
-          size={18} 
-          iconColor="#FFFFFF" 
-          style={styles.streakIcon} 
-        />
-        <Text style={styles.streakValue}>{streak.currentStreak}</Text>
-      </View>
-    </View>
-  );
-
-  // Create footer component
-  const Footer = (
-    <View style={styles.bottomNav}>
-      <View style={[styles.navItem, styles.navItemActive]}>
-        <IconButton 
-          icon="home-outline" 
-          size={24} 
-          iconColor={theme.colors.primary} 
-          style={{ margin: 0 }} 
-        />
-        <Text style={[styles.navLabel, { color: theme.colors.primary }]}>Home</Text>
-      </View>
-      <View 
-        style={styles.navItem}
-        onTouchEnd={() => {
-          // Use replace to avoid adding to history stack
-          router.replace('/analytics');
-        }}
-      >
-        <IconButton 
-          icon="chart-line" 
-          size={24} 
-          iconColor={theme.colors.secondary} 
-          style={{ margin: 0 }} 
-        />
-        <Text style={[styles.navLabel, { color: theme.colors.secondary }]}>Analytics</Text>
-      </View>
-      <View 
-        style={styles.navItem}
-        onTouchEnd={() => {
-          // Use replace to avoid adding to history stack
-          router.replace('/bible');
-        }}
-      >
-        <IconButton 
-          icon="book-open-variant" 
-          size={24} 
-          iconColor={theme.colors.secondary} 
-          style={{ margin: 0 }} 
-        />
-        <Text style={[styles.navLabel, { color: theme.colors.secondary }]}>Bible</Text>
-      </View>
-      <View style={styles.addButtonContainer}>
-        <View 
-          style={[styles.addButton, { backgroundColor: theme.dark ? '#FFFFFF' : '#000000' }]} 
-          onTouchEnd={() => setModalVisible(true)}
-        >
-          <IconButton 
-            icon="plus" 
-            size={32} 
-            iconColor={theme.dark ? '#000000' : '#FFFFFF'} 
-          />
-        </View>
-      </View>
-    </View>
-  );
-
   return (
-    <AppLayout header={Header} footer={Footer}>
-      {/* Full Page Carousel */}
-      <FlatList
-        key={mountKey}
-        ref={flatListRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        scrollEventThrottle={16}
-        decelerationRate="fast"
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1 }}
-        disableIntervalMomentum={true}
-        snapToInterval={SCREEN_WIDTH}
-        snapToAlignment="start"
-        initialScrollIndex={DAYS_TO_SHOW - 1}
-        data={dates}
-        renderItem={({ item, index }) => renderDatePage(item, index)}
-        keyExtractor={(_, index) => index.toString()}
-        getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
-          index,
-        })}
+    <AppLayout 
+      header={<Header streak={streak} />} 
+      footer={<Footer onAddReading={() => setModalVisible(true)} />}
+    >
+      <DateCarousel
+        readings={readings}
+        onDateChange={handleDateChange}
+        onStartReading={() => setModalVisible(true)}
+        chaptersLeftToday={getChaptersLeftToday()}
+        dailyVerse={BibleDataUtils.getDailyVerse()}
+        readingPlanItems={BibleDataUtils.getReadingPlanItems()}
       />
 
       <AddReadingDrawer
         visible={modalVisible}
         onDismiss={() => setModalVisible(false)}
-        onSave={(reading) => handleAddReading(reading)}
+        onSave={handleAddReading}
       />
     </AppLayout>
   );

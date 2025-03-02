@@ -13,7 +13,7 @@ const DailyVerseCard: React.FC<DailyVerseProps> = ({ verse }) => {
   const theme = useTheme();
 
   return (
-    <Surface style={styles.verseCard}>
+    <Surface style={[styles.verseCard, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.verseHeader}>
         <IconButton 
           icon="book-open-page-variant" 

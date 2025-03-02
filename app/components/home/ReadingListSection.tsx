@@ -30,7 +30,7 @@ const ReadingListSection: React.FC<ReadingListSectionProps> = ({
 
       {readings.length > 0 ? (
         readings.map((reading) => (
-          <Surface key={reading.id} style={styles.readingCard}>
+          <Surface key={reading.id} style={[styles.readingCard, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.readingInfo}>
               <Text style={[styles.readingTitle, { color: theme.colors.primary }]}>
                 {reading.book} {reading.chapter}

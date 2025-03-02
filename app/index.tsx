@@ -117,6 +117,8 @@ export default function HomeScreen() {
     const data = await ReadingStorage.loadData();
     setReadings(data.readings);
     setStreak(data.streak);
+    
+    // No need for additional streak calculations here since we're using recalculateStreak
   }
 
   const handleAddReading = async (newReading: any) => {

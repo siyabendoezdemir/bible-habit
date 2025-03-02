@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
 import { ReadingStreak } from '../../types';
+import { isActiveStreak } from '../../utils/readingStorage';
 
 interface HeaderProps {
   streak: ReadingStreak;
@@ -9,15 +10,24 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ streak }) => {
   const theme = useTheme();
+  const isActive = isActiveStreak(streak);
+  
+  // Active streak colors
+  const activeColor = '#F39C12'; // Orange color for active streak
+  const inactiveColor = theme.colors.secondary; // Use secondary color for inactive streak
+  
+  // Choose color based on streak status
+  const badgeColor = isActive ? activeColor : inactiveColor;
+  const iconColor = isActive ? '#FFFFFF' : '#FFFFFF';
 
   return (
     <View style={styles.header}>
       <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>Bible Habit</Text>
-      <View style={[styles.streakBadge, { backgroundColor: theme.colors.primary }]}>
+      <View style={[styles.streakBadge, { backgroundColor: badgeColor }]}>
         <IconButton 
           icon="fire" 
           size={18} 
-          iconColor="#FFFFFF" 
+          iconColor={iconColor} 
           style={styles.streakIcon} 
         />
         <Text style={styles.streakValue}>{streak.currentStreak}</Text>

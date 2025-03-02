@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, Animated, StatusBar } from 'react-native';
+import { View, StyleSheet, Animated, StatusBar, ActivityIndicator } from 'react-native';
 import { useTheme, Text, Snackbar } from 'react-native-paper';
 import { Stack } from 'expo-router';
 import { Drawer } from 'react-native-drawer-layout';
 import AppLayout from './components/AppLayout';
 import { BibleReading } from './types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import components
 import {
@@ -18,15 +19,20 @@ import {
 import { loadRecentlyRead, markAsRead, isChapterAlreadyRead } from './utils/bibleUtils';
 import { SAMPLE_BIBLE_CONTENT } from './constants/BibleContent';
 
+// Storage keys
+const LAST_READ_BOOK_KEY = 'bible-habit:lastReadBook';
+const LAST_READ_CHAPTER_KEY = 'bible-habit:lastReadChapter';
+
 export default function BibleScreen() {
   const theme = useTheme();
-  const [selectedBook, setSelectedBook] = useState('Psalms');
-  const [selectedChapter, setSelectedChapter] = useState(40);
+  const [loading, setLoading] = useState(true); // Start with loading true
+  const [selectedBook, setSelectedBook] = useState('');
+  const [selectedChapter, setSelectedChapter] = useState(0);
   const [isBookSelectionVisible, setIsBookSelectionVisible] = useState(false);
   const [isChapterSelectionVisible, setIsChapterSelectionVisible] = useState(false);
   const [fontSize, setFontSize] = useState(18);
   const [recentlyRead, setRecentlyRead] = useState<BibleReading[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [readingStartTime, setReadingStartTime] = useState<Date | null>(null);
   const [autoTrackingEnabled, setAutoTrackingEnabled] = useState(true);
   const [timeSpentReading, setTimeSpentReading] = useState(0); // in seconds
@@ -36,18 +42,52 @@ export default function BibleScreen() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [autoMarkThreshold, setAutoMarkThreshold] = useState(60); // seconds
   const [isBibleSelectionVisible, setIsBibleSelectionVisible] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Load initial data - recently read chapters and last position
   useEffect(() => {
-    const fetchRecentlyRead = async () => {
-      const readings = await loadRecentlyRead();
-      setRecentlyRead(readings);
+    const initializeApp = async () => {
+      try {
+        // Fetch recently read chapters
+        const readings = await loadRecentlyRead();
+        setRecentlyRead(readings);
+        
+        // Load last read position from AsyncStorage
+        let savedBook = await AsyncStorage.getItem(LAST_READ_BOOK_KEY);
+        let savedChapter = await AsyncStorage.getItem(LAST_READ_CHAPTER_KEY);
+        
+        // Use default values if nothing is saved yet
+        if (!savedBook) {
+          savedBook = 'Psalms';
+        }
+        
+        if (!savedChapter) {
+          savedChapter = '40';
+        }
+        
+        // Set state with saved or default values
+        setSelectedBook(savedBook);
+        setSelectedChapter(Number(savedChapter));
+        setIsInitialized(true);
+        setLoading(false); // Stop loading when data is ready
+      } catch (error) {
+        console.error('Error initializing Bible screen:', error);
+        // Set defaults if there's an error
+        setSelectedBook('Psalms');
+        setSelectedChapter(40);
+        setIsInitialized(true);
+        setLoading(false); // Stop loading even on error
+      }
     };
     
-    fetchRecentlyRead();
+    initializeApp();
   }, []);
 
   // Start tracking reading time when a chapter is selected
   useEffect(() => {
+    // Only start tracking if initialized
+    if (!isInitialized) return;
+    
     // Reset the timer when changing chapters
     setReadingStartTime(new Date());
     setTimeSpentReading(0);
@@ -67,10 +107,26 @@ export default function BibleScreen() {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [selectedBook, selectedChapter, autoTrackingEnabled, autoMarkThreshold, recentlyRead]);
+  }, [selectedBook, selectedChapter, autoTrackingEnabled, autoMarkThreshold, recentlyRead, isInitialized]);
+
+  // Save the current book and chapter whenever they change
+  useEffect(() => {
+    if (isInitialized && selectedBook && selectedChapter > 0) { // Only save after initial load to prevent overwriting with default values
+      const saveCurrentPosition = async () => {
+        try {
+          await AsyncStorage.setItem(LAST_READ_BOOK_KEY, selectedBook);
+          await AsyncStorage.setItem(LAST_READ_CHAPTER_KEY, selectedChapter.toString());
+        } catch (error) {
+          console.error('Error saving current position:', error);
+        }
+      };
+      
+      saveCurrentPosition();
+    }
+  }, [selectedBook, selectedChapter, isInitialized]);
 
   const handleMarkAsRead = useCallback(async (isAutomatic = false) => {
-    setLoading(true);
+    setIsProcessing(true);
     try {
       const result = await markAsRead(selectedBook, selectedChapter, recentlyRead, isAutomatic);
       
@@ -100,7 +156,7 @@ export default function BibleScreen() {
     } catch (error) {
       console.error('Error in handleMarkAsRead:', error);
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   }, [selectedBook, selectedChapter, recentlyRead, fadeAnim]);
 
@@ -108,6 +164,8 @@ export default function BibleScreen() {
     setSelectedBook(book);
     setSelectedChapter(chapter);
     setIsBibleSelectionVisible(false);
+    
+    // We don't need to explicitly save here as the useEffect will handle it
   }, []);
 
   // Get the verses for the current book and chapter
@@ -122,10 +180,10 @@ export default function BibleScreen() {
   // Create header component with updated handler
   const Header = (
     <BibleHeader
-      selectedBook={selectedBook}
-      selectedChapter={selectedChapter}
-      onBookSelect={() => setIsBibleSelectionVisible(true)}
-      onSettingsOpen={() => setIsSettingsOpen(true)}
+      selectedBook={loading ? '' : selectedBook}
+      selectedChapter={loading ? 0 : selectedChapter}
+      onBookSelect={() => !loading && setIsBibleSelectionVisible(true)}
+      onSettingsOpen={() => !loading && setIsSettingsOpen(true)}
     />
   );
 
@@ -159,26 +217,35 @@ export default function BibleScreen() {
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
           <Stack.Screen options={{ headerShown: false }} />
           
-          {/* Bible Content */}
-          <BibleVerseList
-            selectedBook={selectedBook}
-            selectedChapter={selectedChapter}
-            verses={getCurrentVerses()}
-            fontSize={fontSize}
-          >
-            {/* Auto-read notification overlay */}
-            <Animated.View 
-              style={[
-                styles.autoReadOverlay, 
-                { opacity: fadeAnim, backgroundColor: theme.colors.primaryContainer }
-              ]}
-              pointerEvents="none"
-            >
-              <Text style={[styles.autoReadText, { color: theme.colors.primary }]}>
-                Chapter marked as read!
-              </Text>
-            </Animated.View>
-          </BibleVerseList>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={styles.loadingText}>Loading your Bible...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Bible Content */}
+              <BibleVerseList
+                selectedBook={selectedBook}
+                selectedChapter={selectedChapter}
+                verses={getCurrentVerses()}
+                fontSize={fontSize}
+              >
+                {/* Auto-read notification overlay */}
+                <Animated.View 
+                  style={[
+                    styles.autoReadOverlay, 
+                    { opacity: fadeAnim, backgroundColor: theme.colors.primaryContainer }
+                  ]}
+                  pointerEvents="none"
+                >
+                  <Text style={[styles.autoReadText, { color: theme.colors.primary }]}>
+                    Chapter marked as read!
+                  </Text>
+                </Animated.View>
+              </BibleVerseList>
+            </>
+          )}
           
           {/* Snackbar notification */}
           <Snackbar
@@ -196,7 +263,7 @@ export default function BibleScreen() {
       </Drawer>
       
       {/* Unified Bible Selection Modal - render outside the AppLayout for correct rendering */}
-      {isBibleSelectionVisible && (
+      {isBibleSelectionVisible && !loading && (
         <BibleSelectionModal
           selectedBook={selectedBook}
           selectedChapter={selectedChapter}
@@ -211,6 +278,17 @@ export default function BibleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '500',
   },
   autoReadOverlay: {
     position: 'absolute',

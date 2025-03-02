@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, FlatList, Animated, StatusBar } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, FlatList, Animated, StatusBar, Platform } from 'react-native';
 import { useTheme, Text, IconButton, Surface, Divider, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -425,8 +425,29 @@ export default function BibleScreen() {
     );
   };
 
+  // Create custom header component
+  const Header = (
+    <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.headerContent}>
+        <TouchableOpacity 
+          style={styles.bookSelector}
+          onPress={() => setIsBookSelectionVisible(true)}
+        >
+          <Text style={[styles.bookTitle, { color: theme.colors.onSurface }]}>{selectedBook} {selectedChapter}</Text>
+          <IconButton icon="chevron-down" size={20} iconColor={theme.colors.onSurface} style={styles.selectorIcon} />
+        </TouchableOpacity>
+        
+        <View style={styles.headerActions}>
+          <IconButton icon="volume-high" size={24} iconColor={theme.colors.onSurface} onPress={() => {}} />
+          <IconButton icon="magnify" size={24} iconColor={theme.colors.onSurface} onPress={() => {}} />
+          <IconButton icon="dots-horizontal" size={24} iconColor={theme.colors.onSurface} onPress={() => setIsSettingsOpen(true)} />
+        </View>
+      </View>
+    </View>
+  );
+
   return (
-    <AppLayout>
+    <AppLayout header={Header}>
       <StatusBar barStyle="light-content" />
       <Drawer
         open={isSettingsOpen}
@@ -439,25 +460,6 @@ export default function BibleScreen() {
       >
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
           <Stack.Screen options={{ headerShown: false }} />
-          
-          {/* Bible Reader Header */}
-          <Surface style={[styles.header, { backgroundColor: theme.colors.background }]}>
-            <View style={styles.headerContent}>
-              <TouchableOpacity 
-                style={styles.bookSelector}
-                onPress={() => setIsBookSelectionVisible(true)}
-              >
-                <Text style={[styles.bookTitle, { color: theme.colors.onSurface }]}>{selectedBook} {selectedChapter}</Text>
-                <IconButton icon="chevron-down" size={20} iconColor={theme.colors.onSurface} style={styles.selectorIcon} />
-              </TouchableOpacity>
-              
-              <View style={styles.headerActions}>
-                <IconButton icon="volume-high" size={24} iconColor={theme.colors.onSurface} onPress={() => {}} />
-                <IconButton icon="magnify" size={24} iconColor={theme.colors.onSurface} onPress={() => {}} />
-                <IconButton icon="dots-horizontal" size={24} iconColor={theme.colors.onSurface} onPress={() => setIsSettingsOpen(true)} />
-              </View>
-            </View>
-          </Surface>
           
           {/* Bible Content */}
           <ScrollView 
@@ -510,9 +512,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 8,
-    paddingBottom: 8,
-    zIndex: 10,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   headerContent: {
     flexDirection: 'row',

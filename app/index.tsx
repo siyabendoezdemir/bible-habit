@@ -478,6 +478,8 @@ export default function HomeScreen() {
       justifyContent: 'space-between',
       alignItems: 'center',
       borderBottomWidth: 0,
+      width: '100%',
+      height: '100%',
     },
     headerTitle: {
       fontSize: 20,
@@ -777,21 +779,59 @@ export default function HomeScreen() {
     },
   });
 
-  return (
-    <AppLayout hideNavigation>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bible Habit</Text>
-        <View style={styles.streakBadge}>
-          <IconButton 
-            icon="fire" 
-            size={18} 
-            iconColor="#FFFFFF" 
-            style={styles.streakIcon} 
-          />
-          <Text style={styles.streakValue}>{streak.currentStreak}</Text>
-        </View>
+  // Create header component
+  const Header = (
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>Bible Habit</Text>
+      <View style={styles.streakBadge}>
+        <IconButton 
+          icon="fire" 
+          size={18} 
+          iconColor="#FFFFFF" 
+          style={styles.streakIcon} 
+        />
+        <Text style={styles.streakValue}>{streak.currentStreak}</Text>
       </View>
+    </View>
+  );
 
+  // Create footer component
+  const Footer = (
+    <View style={styles.bottomNav}>
+      <Pressable style={[styles.navItem, styles.navItemActive]}>
+        <IconButton icon="home-outline" size={24} iconColor={theme.colors.primary} style={{ margin: 0 }} />
+        <Text style={styles.navLabel}>Home</Text>
+      </Pressable>
+      <Pressable 
+        style={styles.navItem}
+        onPress={() => {
+          // Use replace to avoid adding to history stack
+          router.replace('/analytics');
+        }}
+      >
+        <IconButton icon="chart-line" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
+        <Text style={styles.navLabel}>Analytics</Text>
+      </Pressable>
+      <Pressable 
+        style={styles.navItem}
+        onPress={() => {
+          // Use replace to avoid adding to history stack
+          router.replace('/bible');
+        }}
+      >
+        <IconButton icon="book-open-variant" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
+        <Text style={styles.navLabel}>Bible</Text>
+      </Pressable>
+      <View style={styles.addButtonContainer}>
+        <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
+          <IconButton icon="plus" size={32} iconColor={theme.dark ? '#000000' : '#FFFFFF'} />
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  return (
+    <AppLayout header={Header} footer={Footer}>
       {/* Full Page Carousel */}
       <FlatList
         key={mountKey}
@@ -817,29 +857,6 @@ export default function HomeScreen() {
           index,
         })}
       />
-
-      <View style={styles.bottomNav}>
-        <Pressable style={[styles.navItem, styles.navItemActive]}>
-          <IconButton icon="home-outline" size={24} iconColor={theme.colors.primary} style={{ margin: 0 }} />
-          <Text style={styles.navLabel}>Home</Text>
-        </Pressable>
-        <Pressable style={styles.navItem}>
-          <IconButton icon="chart-line" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
-          <Text style={styles.navLabel}>Analytics</Text>
-        </Pressable>
-        <Pressable 
-          style={styles.navItem}
-          onPress={() => router.replace('/bible')}
-        >
-          <IconButton icon="book-open-variant" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
-          <Text style={styles.navLabel}>Bible</Text>
-        </Pressable>
-        <View style={styles.addButtonContainer}>
-          <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
-            <IconButton icon="plus" size={32} iconColor={theme.dark ? '#000000' : '#FFFFFF'} />
-          </Pressable>
-        </View>
-      </View>
 
       <AddReadingDrawer
         visible={modalVisible}

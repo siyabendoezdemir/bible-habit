@@ -9,6 +9,7 @@ import { useColorScheme, StyleSheet } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 import { lightTheme, darkTheme } from './theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { initializeBibleApiService } from './utils/bibleApiService';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 ExpoSplashScreen.preventAutoHideAsync();
@@ -26,6 +27,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
+      // Initialize the Bible API service
+      initializeBibleApiService().catch(error => {
+        console.error('Failed to initialize Bible API service:', error);
+      });
+      
       ExpoSplashScreen.hideAsync();
     }
   }, [loaded]);

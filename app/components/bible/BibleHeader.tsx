@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text, IconButton, useTheme } from 'react-native-paper';
+import * as BibleApiService from '../../utils/bibleApiService';
 
 interface BibleHeaderProps {
   selectedBook: string;
   selectedChapter: number;
   onBookSelect: () => void;
   onSettingsOpen: () => void;
+  onVersionSelect?: () => void;
 }
 
 const BibleHeader: React.FC<BibleHeaderProps> = ({
@@ -14,8 +16,43 @@ const BibleHeader: React.FC<BibleHeaderProps> = ({
   selectedChapter,
   onBookSelect,
   onSettingsOpen,
+  onVersionSelect,
 }) => {
   const theme = useTheme();
+  const [bibleVersion, setBibleVersion] = useState<string>('');
+  const [versionName, setVersionName] = useState<string>('');
+
+  // Fetch the current Bible version
+  const fetchVersion = useCallback(async () => {
+    try {
+      const version = await BibleApiService.getPreferredVersion();
+      setBibleVersion(version);
+      
+      // Get the full version name if possible
+      const versions = await BibleApiService.getAvailableBibles();
+      const versionDetails = versions.find(v => v.id === version);
+      if (versionDetails) {
+        setVersionName(versionDetails.name);
+      } else {
+        setVersionName(version.toUpperCase());
+      }
+    } catch (error) {
+      console.error('Error fetching Bible version:', error);
+      setBibleVersion('KJV');
+      setVersionName('KJV');
+    }
+  }, []);
+
+  // Fetch the current Bible version on component mount
+  useEffect(() => {
+    fetchVersion();
+    
+    // Set up an event listener for AsyncStorage changes
+    const intervalId = setInterval(fetchVersion, 2000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, [fetchVersion]);
 
   return (
     <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
@@ -36,6 +73,16 @@ const BibleHeader: React.FC<BibleHeaderProps> = ({
         </TouchableOpacity>
         
         <View style={styles.headerActions}>
+          {onVersionSelect && (
+            <TouchableOpacity 
+              style={styles.versionSelector}
+              onPress={onVersionSelect}
+            >
+              <Text style={[styles.versionText, { color: theme.colors.primary }]}>
+                {versionName || bibleVersion.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          )}
           <IconButton 
             icon="volume-high" 
             size={24} 
@@ -92,6 +139,17 @@ const styles = StyleSheet.create({
   selectorIcon: {
     margin: 0,
     padding: 0,
+  },
+  versionSelector: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginRight: 8,
+  },
+  versionText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

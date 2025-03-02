@@ -12,7 +12,8 @@ import {
   BibleHeader,
   BibleVerseList,
   BibleSelectionModal,
-  SettingsDrawer
+  SettingsDrawer,
+  BibleVersionModal
 } from './components/bible';
 
 // Import utilities and constants
@@ -47,11 +48,18 @@ export default function BibleScreen() {
   const [currentVerses, setCurrentVerses] = useState<any[]>([]);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
+  const [isVersionSelectionVisible, setIsVersionSelectionVisible] = useState(false);
 
   // Load initial data - recently read chapters and last position
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        console.log('Initializing Bible screen...');
+        
+        // Initialize the Bible API service first
+        await BibleApiService.initializeBibleApiService();
+        console.log('Bible API service initialized');
+        
         // Fetch recently read chapters
         const readings = await loadRecentlyRead();
         setRecentlyRead(readings);
@@ -74,6 +82,7 @@ export default function BibleScreen() {
         setSelectedChapter(Number(savedChapter));
         setIsInitialized(true);
         setLoading(false); // Stop loading when data is ready
+        console.log('Bible screen initialized successfully');
       } catch (error) {
         console.error('Error initializing Bible screen:', error);
         // Set defaults if there's an error
@@ -206,6 +215,36 @@ export default function BibleScreen() {
     // We don't need to explicitly save here as the useEffect will handle it
   }, []);
 
+  const handleSelectVersion = useCallback(async (version: string) => {
+    try {
+      console.log(`BibleScreen: Changing version to ${version}`);
+      setContentLoading(true);
+      
+      // Set the preferred version
+      await BibleApiService.setPreferredVersion(version);
+      
+      // Reload current chapter with new version
+      if (isInitialized && selectedBook && selectedChapter > 0) {
+        console.log(`BibleScreen: Reloading content for ${selectedBook} ${selectedChapter} with version ${version}`);
+        const bookId = await BibleApiService.getBookIdFromName(selectedBook);
+        if (bookId) {
+          const verses = await BibleApiService.getChapterContent(bookId, selectedChapter, version);
+          setCurrentVerses(verses);
+        }
+      }
+      
+      // Show confirmation
+      setSnackbarMessage(`Bible version changed to ${version.toUpperCase()}`);
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.error('Error setting preferred version:', error);
+      setSnackbarMessage('Failed to change Bible version');
+      setSnackbarVisible(true);
+    } finally {
+      setContentLoading(false);
+    }
+  }, [isInitialized, selectedBook, selectedChapter]);
+
   // Create header component with updated handler
   const Header = (
     <BibleHeader
@@ -213,6 +252,7 @@ export default function BibleScreen() {
       selectedChapter={loading ? 0 : selectedChapter}
       onBookSelect={() => !loading && setIsBibleSelectionVisible(true)}
       onSettingsOpen={() => !loading && setIsSettingsOpen(true)}
+      onVersionSelect={() => !loading && setIsVersionSelectionVisible(true)}
     />
   );
 
@@ -282,6 +322,12 @@ export default function BibleScreen() {
                 onSelectBookAndChapter={handleSelectBookAndChapter}
                 currentBook={selectedBook}
                 currentChapter={selectedChapter}
+              />
+              
+              <BibleVersionModal
+                isVisible={isVersionSelectionVisible}
+                onClose={() => setIsVersionSelectionVisible(false)}
+                onSelectVersion={handleSelectVersion}
               />
               
               <Snackbar

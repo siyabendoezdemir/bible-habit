@@ -1,3 +1,4 @@
+// List of Bible books
 export const BIBLE_BOOKS = [
   'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
   'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel',

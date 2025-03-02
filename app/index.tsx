@@ -1,15 +1,13 @@
-import { View, StyleSheet, ScrollView, Pressable, Platform, Dimensions, Image, ImageBackground, FlatList } from 'react-native';
-import { useTheme, Text, IconButton, Surface, Button, Divider } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, Dimensions, FlatList } from 'react-native';
+import { useTheme, Text, IconButton } from 'react-native-paper';
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format, isToday, differenceInDays, subDays, addDays, parseISO } from 'date-fns';
+import { isToday, differenceInDays, subDays, parseISO } from 'date-fns';
 import { BibleReading, ReadingStreak } from './types';
 import AddReadingDrawer from './components/AddReadingDrawer';
-import ProgressCircle from './components/ProgressCircle';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AppLayout from './components/AppLayout';
+import { DatePage } from './components/home';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAYS_TO_SHOW = 7; // Number of days to show in the carousel
@@ -233,557 +231,42 @@ export default function HomeScreen() {
     };
   };
 
-  // Get streak calendar data (simplified version)
-  const getStreakCalendar = () => {
-    // In a real implementation, this would return actual reading dates
-    const today = new Date();
-    const lastWeek = Array.from({ length: 7 }, (_, i) => {
-      const date = subDays(today, 6 - i);
-      // Simulate some reading days
-      const hasReading = [0, 2, 3, 5, 6].includes(i);
-      return {
-        date,
-        hasReading
-      };
-    });
-    return lastWeek;
+  // Get sample reading plan items
+  const getReadingPlanItems = () => {
+    return [
+      { book: "Genesis 1-2", description: "Creation", completed: true },
+      { book: "Psalms 1", description: "Blessed is the one", completed: true },
+      { book: "Luke 1", description: "John's birth foretold", completed: true },
+      { book: "John 1", description: "The Word", completed: false },
+      { book: "Exodus 1", description: "Israelites oppressed", completed: false },
+      { book: "1 Samuel 1", description: "Samuel's birth", completed: false }
+    ];
   };
 
   const renderDatePage = (date: Date, index: number) => {
     const dateReadings = getFilteredReadings(date);
-    const progress = getTestamentProgress();
-    const overallProgress = getOverallProgress();
-    const chaptersLeft = getChaptersLeftToday();
+    const chaptersLeft = isToday(date) ? getChaptersLeftToday() : 0;
     const dailyVerse = getDailyVerse();
+    const readingPlanItems = getReadingPlanItems();
     
     return (
-      <View key={index} style={styles.pageContainer}>
-        <ScrollView 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.pageScrollContent}
-          bounces={true}
-          alwaysBounceVertical={true}
-        >
-          {/* Date Header */}
-          <Text style={styles.dateHeader}>
-            {isToday(date) ? 'Today' : format(date, 'EEEE, MMMM d')}
-          </Text>
-
-          {/* Combined Card with Extension Effect */}
-          <View style={styles.cardContainer}>
-            {/* Main Goal Card */}
-            <Surface style={styles.primaryCard}>
-              <View style={styles.todayGoalSection}>
-                <View style={styles.goalMainContent}>
-                  <Text style={styles.chaptersLeftValue}>{chaptersLeft}</Text>
-                  <Text style={styles.chaptersLeftLabel}>Chapters left</Text>
-                </View>
-                <View style={styles.goalCircleContainer}>
-                  <ProgressCircle 
-                    progress={(3-chaptersLeft)/3} 
-                    size={80} 
-                    strokeWidth={6} 
-                    color={theme.colors.primary} 
-                    icon="book-open-variant"
-                    iconSize={28}
-                  />
-                </View>
-              </View>
-            </Surface>
-
-            {/* Progress Section */}
-            <View style={styles.progressSection}>
-              <Divider style={styles.progressDivider} />
-              <View style={styles.progressRow}>
-                <View style={styles.fullWidthItem}>
-                  <Text style={styles.progressValue}>Today's Reading Plan</Text>
-                  
-                  <View style={styles.readingPlanContainer}>
-                    <View style={styles.readingPlanRow}>
-                      {/* First Column */}
-                      <View style={styles.readingPlanColumn}>
-                        <View style={styles.readingPlanItem}>
-                          <View style={[styles.readingCheckbox, styles.readingCompleted]}>
-                            <IconButton 
-                              icon="check" 
-                              size={14} 
-                              iconColor="#FFFFFF" 
-                              style={styles.checkIcon} 
-                            />
-                          </View>
-                          <View style={styles.readingPlanContent}>
-                            <Text style={styles.readingPlanBook}>Genesis 1-2</Text>
-                            <Text style={styles.readingPlanDescription}>Creation</Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.readingPlanItem}>
-                          <View style={[styles.readingCheckbox, styles.readingCompleted]}>
-                            <IconButton 
-                              icon="check" 
-                              size={14} 
-                              iconColor="#FFFFFF" 
-                              style={styles.checkIcon} 
-                            />
-                          </View>
-                          <View style={styles.readingPlanContent}>
-                            <Text style={styles.readingPlanBook}>Psalms 1</Text>
-                            <Text style={styles.readingPlanDescription}>Blessed is the one</Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.readingPlanItem}>
-                          <View style={[styles.readingCheckbox, styles.readingCompleted]}>
-                            <IconButton 
-                              icon="check" 
-                              size={14} 
-                              iconColor="#FFFFFF" 
-                              style={styles.checkIcon} 
-                            />
-                          </View>
-                          <View style={styles.readingPlanContent}>
-                            <Text style={styles.readingPlanBook}>Luke 1</Text>
-                            <Text style={styles.readingPlanDescription}>John's birth foretold</Text>
-                          </View>
-                        </View>
-                      </View>
-                      
-                      {/* Second Column */}
-                      <View style={styles.readingPlanColumn}>
-                        <View style={styles.readingPlanItem}>
-                          <View style={styles.readingCheckbox}>
-                            <IconButton 
-                              icon="circle-outline" 
-                              size={14} 
-                              iconColor={theme.colors.primary} 
-                              style={styles.checkIcon} 
-                            />
-                          </View>
-                          <View style={styles.readingPlanContent}>
-                            <Text style={styles.readingPlanBook}>John 1</Text>
-                            <Text style={styles.readingPlanDescription}>The Word</Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.readingPlanItem}>
-                          <View style={styles.readingCheckbox}>
-                            <IconButton 
-                              icon="circle-outline" 
-                              size={14} 
-                              iconColor={theme.colors.primary} 
-                              style={styles.checkIcon} 
-                            />
-                          </View>
-                          <View style={styles.readingPlanContent}>
-                            <Text style={styles.readingPlanBook}>Exodus 1</Text>
-                            <Text style={styles.readingPlanDescription}>Israelites oppressed</Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.readingPlanItem}>
-                          <View style={styles.readingCheckbox}>
-                            <IconButton 
-                              icon="circle-outline" 
-                              size={14} 
-                              iconColor={theme.colors.primary} 
-                              style={styles.checkIcon} 
-                            />
-                          </View>
-                          <View style={styles.readingPlanContent}>
-                            <Text style={styles.readingPlanBook}>1 Samuel 1</Text>
-                            <Text style={styles.readingPlanDescription}>Samuel's birth</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Daily Verse Card */}
-          <Surface style={styles.verseCard}>
-            <View style={styles.verseHeader}>
-              <IconButton icon="book-open-page-variant" size={20} iconColor={theme.colors.primary} style={styles.verseIcon} />
-              <Text style={styles.verseTitle}>Verse of the Day</Text>
-            </View>
-            <Text style={styles.verseText}>"{dailyVerse.text}"</Text>
-            <Text style={styles.verseReference}>{dailyVerse.reference}</Text>
-          </Surface>
-
-          {/* Today's Readings */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {isToday(date) ? 'Today\'s Readings' : `Readings for ${format(date, 'MMM d')}`}
-            </Text>
-            <Text style={styles.sectionSubtitle}>
-              {dateReadings.length > 0 ? `${dateReadings.length} ${dateReadings.length === 1 ? 'chapter' : 'chapters'} read` : ''}
-            </Text>
-          </View>
-
-          {dateReadings.length > 0 ? (
-            dateReadings.map((reading) => (
-              <Surface key={reading.id} style={styles.readingCard}>
-                <View style={styles.readingInfo}>
-                  <Text style={styles.readingTitle}>
-                    {reading.book} {reading.chapter}
-                  </Text>
-                  {reading.notes && (
-                    <View style={styles.readingMeta}>
-                      <Text style={styles.readingMetaText} numberOfLines={2}>
-                        {reading.notes}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.readingTime}>
-                  {format(new Date(reading.date), 'h:mma')}
-                </Text>
-              </Surface>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No readings for this day</Text>
-              {isToday(date) && (
-                <Button 
-                  mode="outlined" 
-                  onPress={() => setModalVisible(true)}
-                  style={styles.emptyStateButton}
-                  icon="book-open-variant"
-                >
-                  Start Reading
-                </Button>
-              )}
-            </View>
-          )}
-          
-          {/* Add some bottom padding to ensure content doesn't get cut off */}
-          <View style={styles.pageBottomPadding} />
-        </ScrollView>
-      </View>
+      <DatePage 
+        key={index}
+        date={date}
+        readings={dateReadings}
+        chaptersLeft={chaptersLeft}
+        onStartReading={() => setModalVisible(true)}
+        readingPlanItems={readingPlanItems}
+        dailyVerse={dailyVerse}
+      />
     );
   };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    header: {
-      paddingHorizontal: 20,
-      paddingTop: 12,
-      paddingBottom: 12,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      borderBottomWidth: 0,
-      width: '100%',
-      height: '100%',
-    },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.primary,
-    },
-    streakBadge: {
-      backgroundColor: theme.colors.primary,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingRight: 12,
-      paddingLeft: 4,
-      borderRadius: 20,
-    },
-    streakIcon: {
-      margin: 0,
-    },
-    streakValue: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: '#FFFFFF',
-    },
-    pageContainer: {
-      width: SCREEN_WIDTH,
-      height: '100%',
-    },
-    pageScrollContent: {
-      paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 20,
-    },
-    pageBottomPadding: {
-      height: 40,
-    },
-    dateHeader: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: theme.colors.primary,
-      marginBottom: 16,
-    },
-    cardContainer: {
-      marginBottom: 16,
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.roundness,
-      elevation: 2,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      overflow: 'hidden',
-    },
-    primaryCard: {
-      padding: 16,
-      backgroundColor: theme.colors.surface,
-      borderRadius: 0,
-      elevation: 0,
-      shadowColor: 'transparent',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0,
-      shadowRadius: 0,
-    },
-    todayGoalSection: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    goalMainContent: {
-      flex: 1,
-    },
-    chaptersLeftValue: {
-      fontSize: 48,
-      fontWeight: '700',
-      color: theme.colors.primary,
-      marginBottom: 4,
-    },
-    chaptersLeftLabel: {
-      fontSize: 16,
-      color: theme.colors.secondary,
-    },
-    goalCircleContainer: {
-      marginLeft: 16,
-      position: 'relative',
-    },
-    progressSection: {
-      backgroundColor: theme.colors.surface,
-      padding: 16,
-      paddingTop: 0,
-      paddingBottom: 8,
-    },
-    progressDivider: {
-      backgroundColor: theme.colors.surfaceVariant,
-      height: 1,
-      marginBottom: 12,
-      opacity: 0.5,
-    },
-    progressRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-    },
-    fullWidthItem: {
-      flex: 1,
-      alignItems: 'flex-start',
-      paddingHorizontal: 0,
-    },
-    progressValue: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.primary,
-      marginTop: 0,
-      marginBottom: 8,
-      textAlign: 'left',
-      alignSelf: 'flex-start',
-    },
-    readingPlanContainer: {
-      width: '100%',
-    },
-    readingPlanRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    readingPlanColumn: {
-      width: '48%',
-    },
-    readingPlanItem: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      marginBottom: 6,
-      width: '100%',
-    },
-    readingCheckbox: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      borderWidth: 1.5,
-      borderColor: theme.colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 8,
-      marginTop: 2,
-    },
-    readingCompleted: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-    },
-    checkIcon: {
-      margin: 0,
-      padding: 0,
-      width: 18,
-      height: 18,
-    },
-    readingPlanContent: {
-      flex: 1,
-    },
-    readingPlanBook: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.primary,
-      marginBottom: 0,
-    },
-    readingPlanDescription: {
-      fontSize: 11,
-      color: theme.colors.secondary,
-      lineHeight: 14,
-    },
-    verseCard: {
-      marginBottom: 24,
-      padding: 16,
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.roundness,
-      elevation: 2,
-    },
-    verseHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    verseIcon: {
-      margin: 0,
-      marginRight: 4,
-    },
-    verseTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.primary,
-    },
-    verseText: {
-      fontSize: 15,
-      fontStyle: 'italic',
-      color: theme.colors.primary,
-      marginBottom: 8,
-      lineHeight: 22,
-    },
-    verseReference: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.secondary,
-      textAlign: 'right',
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-      marginBottom: 12,
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.colors.primary,
-    },
-    sectionSubtitle: {
-      fontSize: 14,
-      color: theme.colors.secondary,
-    },
-    readingCard: {
-      marginBottom: 12,
-      padding: 16,
-      backgroundColor: theme.colors.surface,
-      borderRadius: theme.roundness,
-      flexDirection: 'row',
-      alignItems: 'center',
-      elevation: 2,
-    },
-    readingInfo: {
-      flex: 1,
-    },
-    readingTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.primary,
-      marginBottom: 4,
-    },
-    readingMeta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    readingMetaText: {
-      fontSize: 14,
-      color: theme.colors.secondary,
-    },
-    readingTime: {
-      fontSize: 14,
-      color: theme.colors.secondary,
-      marginLeft: 'auto',
-    },
-    emptyState: {
-      paddingVertical: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    emptyStateText: {
-      color: theme.colors.secondary,
-      marginBottom: 16,
-    },
-    emptyStateButton: {
-      marginTop: 8,
-    },
-    bottomNav: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingTop: 4,
-      paddingBottom: 28,
-      borderTopWidth: 0,
-      backgroundColor: theme.colors.background,
-      height: 72,
-      paddingHorizontal: 16,
-    },
-    navItem: {
-      alignItems: 'center',
-      opacity: 0.5,
-      flex: 1,
-    },
-    navItemActive: {
-      opacity: 1,
-    },
-    navLabel: {
-      fontSize: 12,
-      color: theme.colors.primary,
-      marginTop: -4,
-    },
-    addButton: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      backgroundColor: theme.dark ? '#FFFFFF' : '#000000',
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
-      marginTop: -32,
-    },
-    addButtonContainer: {
-      flex: 1,
-      alignItems: 'center',
-    },
-  });
 
   // Create header component
   const Header = (
     <View style={styles.header}>
-      <Text style={styles.headerTitle}>Bible Habit</Text>
-      <View style={styles.streakBadge}>
+      <Text style={[styles.headerTitle, { color: theme.colors.primary }]}>Bible Habit</Text>
+      <View style={[styles.streakBadge, { backgroundColor: theme.colors.primary }]}>
         <IconButton 
           icon="fire" 
           size={18} 
@@ -798,34 +281,56 @@ export default function HomeScreen() {
   // Create footer component
   const Footer = (
     <View style={styles.bottomNav}>
-      <Pressable style={[styles.navItem, styles.navItemActive]}>
-        <IconButton icon="home-outline" size={24} iconColor={theme.colors.primary} style={{ margin: 0 }} />
-        <Text style={styles.navLabel}>Home</Text>
-      </Pressable>
-      <Pressable 
+      <View style={[styles.navItem, styles.navItemActive]}>
+        <IconButton 
+          icon="home-outline" 
+          size={24} 
+          iconColor={theme.colors.primary} 
+          style={{ margin: 0 }} 
+        />
+        <Text style={[styles.navLabel, { color: theme.colors.primary }]}>Home</Text>
+      </View>
+      <View 
         style={styles.navItem}
-        onPress={() => {
+        onTouchEnd={() => {
           // Use replace to avoid adding to history stack
           router.replace('/analytics');
         }}
       >
-        <IconButton icon="chart-line" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
-        <Text style={styles.navLabel}>Analytics</Text>
-      </Pressable>
-      <Pressable 
+        <IconButton 
+          icon="chart-line" 
+          size={24} 
+          iconColor={theme.colors.secondary} 
+          style={{ margin: 0 }} 
+        />
+        <Text style={[styles.navLabel, { color: theme.colors.secondary }]}>Analytics</Text>
+      </View>
+      <View 
         style={styles.navItem}
-        onPress={() => {
+        onTouchEnd={() => {
           // Use replace to avoid adding to history stack
           router.replace('/bible');
         }}
       >
-        <IconButton icon="book-open-variant" size={24} iconColor={theme.colors.secondary} style={{ margin: 0 }} />
-        <Text style={styles.navLabel}>Bible</Text>
-      </Pressable>
+        <IconButton 
+          icon="book-open-variant" 
+          size={24} 
+          iconColor={theme.colors.secondary} 
+          style={{ margin: 0 }} 
+        />
+        <Text style={[styles.navLabel, { color: theme.colors.secondary }]}>Bible</Text>
+      </View>
       <View style={styles.addButtonContainer}>
-        <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
-          <IconButton icon="plus" size={32} iconColor={theme.dark ? '#000000' : '#FFFFFF'} />
-        </Pressable>
+        <View 
+          style={[styles.addButton, { backgroundColor: theme.dark ? '#FFFFFF' : '#000000' }]} 
+          onTouchEnd={() => setModalVisible(true)}
+        >
+          <IconButton 
+            icon="plus" 
+            size={32} 
+            iconColor={theme.dark ? '#000000' : '#FFFFFF'} 
+          />
+        </View>
       </View>
     </View>
   );
@@ -861,8 +366,79 @@ export default function HomeScreen() {
       <AddReadingDrawer
         visible={modalVisible}
         onDismiss={() => setModalVisible(false)}
-        onSave={handleAddReading}
+        onSave={(reading) => handleAddReading(reading)}
       />
     </AppLayout>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 0,
+    width: '100%',
+    height: '100%',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 12,
+    paddingLeft: 4,
+    borderRadius: 20,
+  },
+  streakIcon: {
+    margin: 0,
+  },
+  streakValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+    paddingBottom: 28,
+    borderTopWidth: 0,
+    height: 72,
+    paddingHorizontal: 16,
+  },
+  navItem: {
+    alignItems: 'center',
+    opacity: 0.5,
+    flex: 1,
+  },
+  navItemActive: {
+    opacity: 1,
+  },
+  navLabel: {
+    fontSize: 12,
+    marginTop: -4,
+  },
+  addButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: -32,
+  },
+  addButtonContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+}); 

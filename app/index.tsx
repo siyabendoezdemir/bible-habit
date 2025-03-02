@@ -1,6 +1,6 @@
 import { View, StyleSheet, Dimensions, FlatList } from 'react-native';
 import { useTheme, Text, IconButton } from 'react-native-paper';
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isToday, differenceInDays, subDays, parseISO } from 'date-fns';
 import { BibleReading, ReadingStreak } from './types';
@@ -132,6 +132,13 @@ export default function HomeScreen() {
       notes: newReading.notes || ''
     };
     
+    // Check if this is a duplicate reading before adding
+    if (ReadingStorage.isDuplicateReading(readings, readingToAdd)) {
+      // If it's a duplicate, just dismiss the modal without saving
+      setModalVisible(false);
+      return;
+    }
+    
     const result = await ReadingStorage.addReading(readings, streak, readingToAdd);
     setReadings(result.readings);
     setStreak(result.streak);
@@ -145,7 +152,8 @@ export default function HomeScreen() {
   // Get chapters left to read today
   const getChaptersLeftToday = () => {
     const todayReadings = ReadingStorage.getFilteredReadings(readings, new Date());
-    return BibleDataUtils.getChaptersLeftToday(todayReadings);
+    const uniqueTodayReadings = ReadingStorage.getUniqueReadings(todayReadings);
+    return BibleDataUtils.getChaptersLeftToday(uniqueTodayReadings);
   };
 
   // Handle date change in the carousel
@@ -155,7 +163,7 @@ export default function HomeScreen() {
 
   // Filter readings based on selected date
   const getFilteredReadings = (date: Date) => {
-    return readings.filter(reading => {
+    const dateFilteredReadings = readings.filter(reading => {
       const readingDate = new Date(reading.date);
       return (
         readingDate.getDate() === date.getDate() &&
@@ -163,6 +171,9 @@ export default function HomeScreen() {
         readingDate.getFullYear() === date.getFullYear()
       );
     });
+    
+    // Filter out duplicate readings (same book and chapter)
+    return ReadingStorage.getUniqueReadings(dateFilteredReadings);
   };
 
   // Calculate total chapters read
@@ -244,25 +255,29 @@ export default function HomeScreen() {
   };
 
   return (
-    <AppLayout 
-      header={<Header streak={streak} />} 
-      footer={<Footer onAddReading={() => setModalVisible(true)} />}
-    >
-      <DateCarousel
-        readings={readings}
-        onDateChange={handleDateChange}
-        onStartReading={() => setModalVisible(true)}
-        chaptersLeftToday={getChaptersLeftToday()}
-        dailyVerse={BibleDataUtils.getDailyVerse()}
-        readingPlanItems={BibleDataUtils.getReadingPlanItems()}
-      />
+    <>
+      <AppLayout 
+        header={<Header streak={streak} />} 
+        footer={<Footer onAddReading={() => setModalVisible(true)} />}
+      >
+        <DateCarousel
+          readings={readings}
+          onDateChange={handleDateChange}
+          onStartReading={() => setModalVisible(true)}
+          chaptersLeftToday={getChaptersLeftToday()}
+          dailyVerse={BibleDataUtils.getDailyVerse()}
+          readingPlanItems={BibleDataUtils.getReadingPlanItems()}
+        />
+      </AppLayout>
 
+      {/* Render AddReadingDrawer outside of AppLayout to avoid z-index issues */}
       <AddReadingDrawer
         visible={modalVisible}
         onDismiss={() => setModalVisible(false)}
         onSave={handleAddReading}
+        readings={readings}
       />
-    </AppLayout>
+    </>
   );
 }
 

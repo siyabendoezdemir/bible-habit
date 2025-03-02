@@ -163,12 +163,30 @@ export const isActiveStreak = (streak: ReadingStreak): boolean => {
   return lastReadDay === todayDay || lastReadDay === yesterdayDay;
 };
 
+// Check if a reading already exists
+export const isDuplicateReading = (
+  readings: BibleReading[],
+  newReading: BibleReading
+): boolean => {
+  return readings.some(reading => 
+    reading.book === newReading.book && 
+    reading.chapter === newReading.chapter
+  );
+};
+
 // Add a new reading and update streak
 export const addReading = async (
   readings: BibleReading[], 
   streak: ReadingStreak, 
   newReading: BibleReading
 ): Promise<{ readings: BibleReading[], streak: ReadingStreak }> => {
+  // Check if this reading already exists
+  if (isDuplicateReading(readings, newReading)) {
+    console.log('Duplicate reading detected, not adding:', newReading.book, newReading.chapter);
+    return { readings, streak }; // Return existing data without changes
+  }
+
+  // If not a duplicate, add the new reading
   const updatedReadings = [newReading, ...readings];
   const updatedStreak = recalculateStreak(updatedReadings);
 
@@ -209,4 +227,23 @@ export const getFilteredReadings = (readings: BibleReading[], date: Date): Bible
       readingDate.getFullYear() === date.getFullYear()
     );
   });
+};
+
+// Get unique readings by filtering out duplicates (same book and chapter)
+export const getUniqueReadings = (readings: BibleReading[]): BibleReading[] => {
+  const uniqueMap = new Map<string, BibleReading>();
+  
+  // For each reading, create a unique key based on book and chapter
+  readings.forEach(reading => {
+    const key = `${reading.book}-${reading.chapter}`;
+    
+    // If this book/chapter combination isn't in our map yet, or if this reading is newer
+    // than the one we already have, update the map
+    if (!uniqueMap.has(key) || new Date(reading.date) > new Date(uniqueMap.get(key)!.date)) {
+      uniqueMap.set(key, reading);
+    }
+  });
+  
+  // Convert the map values back to an array
+  return Array.from(uniqueMap.values());
 }; 

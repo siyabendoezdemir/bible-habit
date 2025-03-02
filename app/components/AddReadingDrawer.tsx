@@ -9,15 +9,17 @@ interface AddReadingDrawerProps {
   visible: boolean;
   onDismiss: () => void;
   onSave: (reading: BibleReading) => void;
+  readings?: BibleReading[];
 }
 
-export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddReadingDrawerProps) {
+export default function AddReadingDrawer({ visible, onDismiss, onSave, readings = [] }: AddReadingDrawerProps) {
   const theme = useTheme();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [book, setBook] = React.useState('');
   const [chapter, setChapter] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [bookError, setBookError] = React.useState('');
+  const [chapterError, setChapterError] = React.useState('');
   const [showSuggestions, setShowSuggestions] = React.useState(false);
 
   // Variables
@@ -37,6 +39,21 @@ export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddRead
       return;
     }
 
+    if (!chapter || isNaN(parseInt(chapter))) {
+      setChapterError('Please enter a valid chapter number');
+      return;
+    }
+
+    // Check for duplicate readings
+    const isDuplicate = readings.some(
+      reading => reading.book === book && reading.chapter === parseInt(chapter)
+    );
+
+    if (isDuplicate) {
+      setChapterError(`You've already logged ${book} ${chapter}`);
+      return;
+    }
+
     onSave({
       id: Date.now().toString(),
       book,
@@ -50,6 +67,7 @@ export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddRead
     setChapter('');
     setNotes('');
     setBookError('');
+    setChapterError('');
     onDismiss();
   };
 
@@ -76,6 +94,12 @@ export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddRead
     return matches;
   }, [book, showSuggestions]);
 
+  // Clear errors when input changes
+  const handleChapterChange = (text: string) => {
+    setChapter(text);
+    setChapterError('');
+  };
+
   return (
     <BottomSheet
       ref={bottomSheetRef}
@@ -91,10 +115,13 @@ export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddRead
         backgroundColor: theme.colors.onSurface,
         opacity: 0.5,
       }}
+      style={{
+        zIndex: 1000,
+      }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
         style={{ flex: 1 }}
       >
         <TouchableWithoutFeedback onPress={() => {
@@ -160,12 +187,18 @@ export default function AddReadingDrawer({ visible, onDismiss, onSave }: AddRead
                 <Text style={[styles.inputLabel, { color: theme.colors.secondary }]}>Chapter</Text>
                 <TextInput
                   value={chapter}
-                  onChangeText={setChapter}
+                  onChangeText={handleChapterChange}
                   keyboardType="number-pad"
                   style={[styles.input, { backgroundColor: theme.colors.surface }]}
                   mode="outlined"
                   placeholder="Enter chapter number"
+                  error={!!chapterError}
                 />
+                {chapterError ? (
+                  <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                    {chapterError}
+                  </Text>
+                ) : null}
               </View>
 
               <View style={styles.inputContainer}>
@@ -234,12 +267,13 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: '4%',
+    bottom: Platform.OS === 'ios' ? 40 : 20,
     left: 0,
     right: 0,
     padding: 20,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    zIndex: 1001,
   },
   button: {
     borderRadius: 12,
@@ -275,5 +309,10 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
   },
 }); 

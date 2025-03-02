@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Surface, Button, useTheme } from 'react-native-paper';
 import { format, isToday } from 'date-fns';
 import { BibleReading } from '../../types';
+import * as ReadingStorage from '../../utils/readingStorage';
 
 interface ReadingListSectionProps {
   date: Date;
@@ -16,6 +17,11 @@ const ReadingListSection: React.FC<ReadingListSectionProps> = ({
   onStartReading 
 }) => {
   const theme = useTheme();
+  
+  // Filter out duplicate readings
+  const uniqueReadings = useMemo(() => {
+    return ReadingStorage.getUniqueReadings(readings);
+  }, [readings]);
 
   return (
     <View style={styles.container}>
@@ -24,12 +30,12 @@ const ReadingListSection: React.FC<ReadingListSectionProps> = ({
           {isToday(date) ? 'Today\'s Readings' : `Readings for ${format(date, 'MMM d')}`}
         </Text>
         <Text style={[styles.sectionSubtitle, { color: theme.colors.secondary }]}>
-          {readings.length > 0 ? `${readings.length} ${readings.length === 1 ? 'chapter' : 'chapters'} read` : ''}
+          {uniqueReadings.length > 0 ? `${uniqueReadings.length} ${uniqueReadings.length === 1 ? 'chapter' : 'chapters'} read` : ''}
         </Text>
       </View>
 
-      {readings.length > 0 ? (
-        readings.map((reading) => (
+      {uniqueReadings.length > 0 ? (
+        uniqueReadings.map((reading) => (
           <Surface key={reading.id} style={[styles.readingCard, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.readingInfo}>
               <Text style={[styles.readingTitle, { color: theme.colors.primary }]}>

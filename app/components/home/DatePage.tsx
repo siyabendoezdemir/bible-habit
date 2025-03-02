@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { format, isToday } from 'date-fns';
 import { BibleReading } from '../../types';
+import * as ReadingStorage from '../../utils/readingStorage';
 
 import DailyVerseCard from './DailyVerseCard';
 import ReadingGoalCard from './ReadingGoalCard';
@@ -36,6 +37,11 @@ const DatePage: React.FC<DatePageProps> = ({
   dailyVerse
 }) => {
   const theme = useTheme();
+  
+  // Get unique readings (filter out duplicates)
+  const uniqueReadings = React.useMemo(() => {
+    return ReadingStorage.getUniqueReadings(readings);
+  }, [readings]);
 
   return (
     <View style={styles.pageContainer}>
@@ -62,7 +68,7 @@ const DatePage: React.FC<DatePageProps> = ({
         {/* Reading List Section */}
         <ReadingListSection 
           date={date} 
-          readings={readings} 
+          readings={uniqueReadings} 
           onStartReading={onStartReading}
         />
         

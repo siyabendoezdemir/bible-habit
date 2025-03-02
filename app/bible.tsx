@@ -17,7 +17,8 @@ import {
 
 // Import utilities and constants
 import { loadRecentlyRead, markAsRead, isChapterAlreadyRead } from './utils/bibleUtils';
-import { SAMPLE_BIBLE_CONTENT } from './constants/BibleContent';
+import { getChapterCount } from './constants/BibleContent';
+import * as BibleApiService from './utils/bibleApiService';
 
 // Storage keys
 const LAST_READ_BOOK_KEY = 'bible-habit:lastReadBook';
@@ -25,7 +26,7 @@ const LAST_READ_CHAPTER_KEY = 'bible-habit:lastReadChapter';
 
 export default function BibleScreen() {
   const theme = useTheme();
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loading, setLoading] = useState(true);
   const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapter, setSelectedChapter] = useState(0);
   const [isBookSelectionVisible, setIsBookSelectionVisible] = useState(false);
@@ -43,6 +44,9 @@ export default function BibleScreen() {
   const [autoMarkThreshold, setAutoMarkThreshold] = useState(60); // seconds
   const [isBibleSelectionVisible, setIsBibleSelectionVisible] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [currentVerses, setCurrentVerses] = useState<any[]>([]);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
 
   // Load initial data - recently read chapters and last position
   useEffect(() => {
@@ -58,11 +62,11 @@ export default function BibleScreen() {
         
         // Use default values if nothing is saved yet
         if (!savedBook) {
-          savedBook = 'Psalms';
+          savedBook = 'John';
         }
         
         if (!savedChapter) {
-          savedChapter = '40';
+          savedChapter = '1';
         }
         
         // Set state with saved or default values
@@ -73,8 +77,8 @@ export default function BibleScreen() {
       } catch (error) {
         console.error('Error initializing Bible screen:', error);
         // Set defaults if there's an error
-        setSelectedBook('Psalms');
-        setSelectedChapter(40);
+        setSelectedBook('John');
+        setSelectedChapter(1);
         setIsInitialized(true);
         setLoading(false); // Stop loading even on error
       }
@@ -82,6 +86,40 @@ export default function BibleScreen() {
     
     initializeApp();
   }, []);
+
+  // Load chapter content when book or chapter changes
+  useEffect(() => {
+    // Skip if not initialized yet
+    if (!isInitialized || !selectedBook || selectedChapter <= 0) return;
+
+    const loadChapterContent = async () => {
+      setContentLoading(true);
+      setContentError(null);
+      try {
+        // Get bookId from book name
+        const bookId = await BibleApiService.getBookIdFromName(selectedBook);
+        
+        if (!bookId) {
+          setContentError(`Could not find book ID for "${selectedBook}"`);
+          setCurrentVerses([]);
+          setContentLoading(false);
+          return;
+        }
+        
+        // Fetch chapter content
+        const verses = await BibleApiService.getChapterContent(bookId, selectedChapter);
+        setCurrentVerses(verses);
+      } catch (error) {
+        console.error('Error loading chapter content:', error);
+        setContentError('Failed to load Bible content. Please try again later.');
+        setCurrentVerses([]);
+      } finally {
+        setContentLoading(false);
+      }
+    };
+    
+    loadChapterContent();
+  }, [selectedBook, selectedChapter, isInitialized]);
 
   // Start tracking reading time when a chapter is selected
   useEffect(() => {
@@ -168,15 +206,6 @@ export default function BibleScreen() {
     // We don't need to explicitly save here as the useEffect will handle it
   }, []);
 
-  // Get the verses for the current book and chapter
-  const getCurrentVerses = () => {
-    const chapterStr = selectedChapter.toString();
-    if (SAMPLE_BIBLE_CONTENT[selectedBook] && SAMPLE_BIBLE_CONTENT[selectedBook][chapterStr]) {
-      return SAMPLE_BIBLE_CONTENT[selectedBook][chapterStr];
-    }
-    return [];
-  };
-
   // Create header component with updated handler
   const Header = (
     <BibleHeader
@@ -220,57 +249,53 @@ export default function BibleScreen() {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={styles.loadingText}>Loading your Bible...</Text>
+              <Text style={[styles.loadingText, { color: theme.colors.primary }]}>Loading Bible...</Text>
             </View>
           ) : (
             <>
-              {/* Bible Content */}
               <BibleVerseList
                 selectedBook={selectedBook}
                 selectedChapter={selectedChapter}
-                verses={getCurrentVerses()}
+                verses={currentVerses}
                 fontSize={fontSize}
               >
-                {/* Auto-read notification overlay */}
-                <Animated.View 
-                  style={[
-                    styles.autoReadOverlay, 
-                    { opacity: fadeAnim, backgroundColor: theme.colors.primaryContainer }
-                  ]}
-                  pointerEvents="none"
-                >
-                  <Text style={[styles.autoReadText, { color: theme.colors.primary }]}>
-                    Chapter marked as read!
-                  </Text>
-                </Animated.View>
+                {contentLoading && (
+                  <View style={styles.contentLoadingContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={{ color: theme.colors.onSurface, marginTop: 10 }}>Loading chapter content...</Text>
+                  </View>
+                )}
+                
+                {contentError && (
+                  <View style={styles.errorContainer}>
+                    <Text style={{ color: theme.colors.error }}>{contentError}</Text>
+                    <Text style={{ color: theme.colors.onSurface, marginTop: 10 }}>
+                      Please check your internet connection or API key configuration.
+                    </Text>
+                  </View>
+                )}
               </BibleVerseList>
+
+              <BibleSelectionModal
+                isVisible={isBibleSelectionVisible}
+                onClose={() => setIsBibleSelectionVisible(false)}
+                onSelectBookAndChapter={handleSelectBookAndChapter}
+                currentBook={selectedBook}
+                currentChapter={selectedChapter}
+              />
+              
+              <Snackbar
+                visible={snackbarVisible}
+                onDismiss={() => setSnackbarVisible(false)}
+                duration={3000}
+                style={{ backgroundColor: theme.colors.primaryContainer }}
+              >
+                <Text style={{ color: theme.colors.onPrimaryContainer }}>{snackbarMessage}</Text>
+              </Snackbar>
             </>
           )}
-          
-          {/* Snackbar notification */}
-          <Snackbar
-            visible={snackbarVisible}
-            onDismiss={() => setSnackbarVisible(false)}
-            duration={3000}
-            action={{
-              label: 'OK',
-              onPress: () => setSnackbarVisible(false),
-            }}
-          >
-            {snackbarMessage}
-          </Snackbar>
         </View>
       </Drawer>
-      
-      {/* Unified Bible Selection Modal - render outside the AppLayout for correct rendering */}
-      {isBibleSelectionVisible && !loading && (
-        <BibleSelectionModal
-          selectedBook={selectedBook}
-          selectedChapter={selectedChapter}
-          onSelectBookAndChapter={handleSelectBookAndChapter}
-          onClose={() => setIsBibleSelectionVisible(false)}
-        />
-      )}
     </AppLayout>
   );
 }
@@ -283,26 +308,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
   },
-  autoReadOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -100 }, { translateY: -50 }],
-    width: 200,
-    padding: 16,
-    borderRadius: 8,
+  contentLoadingContainer: {
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  autoReadText: {
-    fontWeight: '700',
-    fontSize: 16,
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 0, 0, 0.05)',
+    borderRadius: 8,
+    marginVertical: 10,
   },
 }); 

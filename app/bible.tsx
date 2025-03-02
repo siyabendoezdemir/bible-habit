@@ -10,8 +10,7 @@ import { BibleReading } from './types';
 import {
   BibleHeader,
   BibleVerseList,
-  BookSelectionModal,
-  ChapterSelectionModal,
+  BibleSelectionModal,
   SettingsDrawer
 } from './components/bible';
 
@@ -36,6 +35,7 @@ export default function BibleScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [autoMarkThreshold, setAutoMarkThreshold] = useState(60); // seconds
+  const [isBibleSelectionVisible, setIsBibleSelectionVisible] = useState(false);
 
   useEffect(() => {
     const fetchRecentlyRead = async () => {
@@ -104,17 +104,10 @@ export default function BibleScreen() {
     }
   }, [selectedBook, selectedChapter, recentlyRead, fadeAnim]);
 
-  const handleBookSelect = useCallback((book: string) => {
+  const handleSelectBookAndChapter = useCallback((book: string, chapter: number) => {
     setSelectedBook(book);
-    setSelectedChapter(1); // Reset to chapter 1 when book changes
-    setIsBookSelectionVisible(false);
-    // Show chapter selection after selecting a book
-    setIsChapterSelectionVisible(true);
-  }, []);
-
-  const handleChapterSelect = useCallback((chapter: number) => {
     setSelectedChapter(chapter);
-    setIsChapterSelectionVisible(false);
+    setIsBibleSelectionVisible(false);
   }, []);
 
   // Get the verses for the current book and chapter
@@ -126,15 +119,20 @@ export default function BibleScreen() {
     return [];
   };
 
-  // Create header component
+  // Create header component with updated handler
   const Header = (
     <BibleHeader
       selectedBook={selectedBook}
       selectedChapter={selectedChapter}
-      onBookSelect={() => setIsBookSelectionVisible(true)}
+      onBookSelect={() => setIsBibleSelectionVisible(true)}
       onSettingsOpen={() => setIsSettingsOpen(true)}
     />
   );
+
+  // For backwards compatibility - not needed for new implementation
+  useEffect(() => {
+    setIsBookSelectionVisible(isBibleSelectionVisible);
+  }, [isBibleSelectionVisible]);
 
   return (
     <AppLayout header={Header}>
@@ -182,25 +180,6 @@ export default function BibleScreen() {
             </Animated.View>
           </BibleVerseList>
           
-          {/* Book Selection Modal */}
-          {isBookSelectionVisible && (
-            <BookSelectionModal
-              selectedBook={selectedBook}
-              onBookSelect={handleBookSelect}
-              onClose={() => setIsBookSelectionVisible(false)}
-            />
-          )}
-          
-          {/* Chapter Selection Modal */}
-          {isChapterSelectionVisible && (
-            <ChapterSelectionModal
-              selectedBook={selectedBook}
-              selectedChapter={selectedChapter}
-              onChapterSelect={handleChapterSelect}
-              onClose={() => setIsChapterSelectionVisible(false)}
-            />
-          )}
-          
           {/* Snackbar notification */}
           <Snackbar
             visible={snackbarVisible}
@@ -215,6 +194,16 @@ export default function BibleScreen() {
           </Snackbar>
         </View>
       </Drawer>
+      
+      {/* Unified Bible Selection Modal - render outside the AppLayout for correct rendering */}
+      {isBibleSelectionVisible && (
+        <BibleSelectionModal
+          selectedBook={selectedBook}
+          selectedChapter={selectedChapter}
+          onSelectBookAndChapter={handleSelectBookAndChapter}
+          onClose={() => setIsBibleSelectionVisible(false)}
+        />
+      )}
     </AppLayout>
   );
 }

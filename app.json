@@ -34,9 +34,12 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#000000",
-          "sounds": ["./assets/notification-sound.wav"]
+          "sounds": [
+            "./assets/notification-sound.wav"
+          ]
         }
-      ]
+      ],
+      "expo-localization"
     ]
   }
 }

@@ -10,6 +10,8 @@ export interface BibleContent {
   };
 }
 
+// This is just a sample for development purposes
+// The actual content is now provided by the BibleApiService
 export const SAMPLE_BIBLE_CONTENT: BibleContent = {
   "Genesis": {
     "1": [

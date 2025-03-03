@@ -33,6 +33,7 @@ interface BibleVersion {
   language: string;
   languageName: string;
   description?: string;
+  shortName?: string;
 }
 
 // For sectioned list data
@@ -91,43 +92,77 @@ const BibleVersionModal: React.FC<BibleVersionModalProps> = ({
         // Get the currently selected version
         const preferredVersion = await BibleApiService.getPreferredVersion();
         setCurrentVersion(preferredVersion);
+        console.log(`Current preferred version: ${preferredVersion}`);
         
-        // Only fetch versions if we don't already have them
-        if (versions.length === 0) {
-          console.log('BibleVersionModal: Fetching available Bible versions');
+        // Clear the versions cache to ensure we get fresh data
+        await BibleApiService.clearVersionsCache();
+        
+        console.log('BibleVersionModal: Fetching available Bible versions from new endpoint');
+        try {
           // Get all available versions
           const availableVersions = await BibleApiService.getAvailableBibles();
+          console.log(`BibleVersionModal: Fetched ${availableVersions.length} Bible versions`);
           
           // Only update state if the modal is still visible
           if (isVisible) {
-            setVersions(availableVersions);
+            if (availableVersions.length === 0) {
+              console.error('BibleVersionModal: No Bible versions returned from API');
+              setError('No Bible versions available. Please check your internet connection and try again.');
+            } else {
+              console.log('BibleVersionModal: Setting versions in state');
+              setVersions(availableVersions);
+              
+              // Extract unique languages and sort them
+              const uniqueLanguages = Array.from(new Set(
+                availableVersions.map(version => version.languageName)
+              )).sort();
+              console.log(`BibleVersionModal: Found ${uniqueLanguages.length} unique languages`);
+              setLanguages(uniqueLanguages);
+              
+              // Process versions initially
+              processVersions(availableVersions, activeLanguageFilter, searchQuery);
+            }
+          }
+        } catch (error: any) {
+          console.error('BibleVersionModal: Error fetching Bible versions:', error);
+          setError(`Failed to load Bible versions: ${error.message || 'Unknown error'}`);
+          
+          // Use fallback versions from the default list
+          console.log('BibleVersionModal: Using fallback versions');
+          
+          // Create a minimal set of fallback versions
+          const fallbackVersions: BibleVersion[] = [
+            { id: 'eng-kjv', name: 'King James Version', language: 'eng', languageName: 'English', description: 'KJV - English' },
+            { id: 'eng-web', name: 'World English Bible', language: 'eng', languageName: 'English', description: 'WEB - English' },
+            { id: 'deu-luth1545', name: 'Luther Bible 1545', language: 'deu', languageName: 'German', description: 'LUTH1545 - German' }
+          ];
+          
+          if (fallbackVersions.length > 0) {
+            console.log(`BibleVersionModal: Using ${fallbackVersions.length} fallback versions`);
+            setVersions(fallbackVersions);
             
             // Extract unique languages and sort them
             const uniqueLanguages = Array.from(new Set(
-              availableVersions.map(version => version.languageName)
+              fallbackVersions.map(version => version.languageName)
             )).sort();
             setLanguages(uniqueLanguages);
             
             // Process versions initially
-            processVersions(availableVersions, activeLanguageFilter, searchQuery);
+            processVersions(fallbackVersions, activeLanguageFilter, searchQuery);
           }
-        } else {
-          console.log(`BibleVersionModal: Using ${versions.length} cached versions`);
-          // Just process the versions we already have
-          processVersions(versions, activeLanguageFilter, searchQuery);
         }
         
         setLoading(false);
-      } catch (error) {
-        console.error('Error loading Bible versions:', error);
-        setError('Failed to load Bible versions. Please try again.');
+      } catch (error: any) {
+        console.error('BibleVersionModal: Error in loadData:', error);
+        setError(`Failed to load Bible versions: ${error.message || 'Unknown error'}`);
         setLoading(false);
       }
     };
     
     loadData();
     startAnimations();
-  }, [isVisible, activeLanguageFilter, searchQuery, versions.length]);
+  }, [isVisible]);
   
   // Process versions based on filters
   const processVersions = useCallback((allVersions: BibleVersion[], languageFilter: string | null, query: string) => {
@@ -178,7 +213,14 @@ const BibleVersionModal: React.FC<BibleVersionModalProps> = ({
         title,
         data: data.sort((a, b) => a.name.localeCompare(b.name))
       }))
-      .sort((a, b) => a.title.localeCompare(b.title));
+      .sort((a, b) => {
+        // Prioritize English and German sections
+        if (a.title === 'English') return -1;
+        if (b.title === 'English') return 1;
+        if (a.title === 'German') return -1;
+        if (b.title === 'German') return 1;
+        return a.title.localeCompare(b.title);
+      });
     
     console.log(`Created ${sections.length} language sections`);
     
@@ -188,10 +230,12 @@ const BibleVersionModal: React.FC<BibleVersionModalProps> = ({
     setShowSectionedList(true);
   }, []);
   
-  // Handle search query changes
+  // Handle search query and language filter changes
   useEffect(() => {
-    processVersions(versions, activeLanguageFilter, searchQuery);
-  }, [searchQuery, versions, activeLanguageFilter, processVersions]);
+    if (versions.length > 0) {
+      processVersions(versions, activeLanguageFilter, searchQuery);
+    }
+  }, [searchQuery, activeLanguageFilter, versions, processVersions]);
   
   // Handle language filter changes
   const handleLanguageFilter = (language: string | null) => {
@@ -203,8 +247,6 @@ const BibleVersionModal: React.FC<BibleVersionModalProps> = ({
       // When setting a language filter, clear the search
       setSearchQuery('');
     }
-    
-    processVersions(versions, language === activeLanguageFilter ? null : language, searchQuery);
   };
   
   // Animation functions
@@ -298,7 +340,7 @@ const BibleVersionModal: React.FC<BibleVersionModalProps> = ({
             { color: paperColors.text }
           ]}
         >
-          {item.name}
+          {item.shortName ? `${item.shortName} - ${item.name}` : item.name}
         </Text>
         <Text 
           style={[

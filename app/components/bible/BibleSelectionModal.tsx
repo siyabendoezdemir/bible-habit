@@ -92,8 +92,9 @@ const BibleSelectionModal: React.FC<BibleSelectionModalProps> = ({
   const loadChapters = useCallback(async (bookId: string) => {
     try {
       setLoading(true);
-      const chapters = await BibleApiService.getBookChapters(bookId);
-      const chapterNumbers = chapters.map(chapter => parseInt(chapter.number));
+      const chapterCount = await BibleApiService.getBookChapters(bookId);
+      // Create an array of chapter numbers from 1 to chapterCount
+      const chapterNumbers = Array.from({ length: chapterCount }, (_, i) => i + 1);
       setChaptersList(chapterNumbers);
     } catch (err) {
       console.error('Error loading chapters:', err);

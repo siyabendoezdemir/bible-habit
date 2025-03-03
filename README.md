@@ -1,26 +1,55 @@
 # Bible Habit App
 
-A mobile application built with Expo and React Native for Bible reading, tracking, and exploration.
+A mobile app to track your Bible reading habits, built with Expo and React Native.
+
+## Bible API Implementation
+
+The app uses a simplified Bible API implementation with the following features:
+
+- Uses the English Standard Version (ESV) as the default Bible version
+- Designed to be maintainable and extensible for adding more versions and languages in the future
+- Implements caching for better performance and offline access
+- Provides a clean API for accessing Bible content
+
+### Bible API Structure
+
+The Bible API is implemented in `app/utils/bibleApiService.ts` and provides the following functionality:
+
+- `getChapterContent`: Get all verses for a specific chapter
+- `getVerseContent`: Get a specific verse
+- `getBibleBooks`: Get a list of all Bible books
+- `getBookChapters`: Get the number of chapters in a book
+- `getAvailableBibles`: Get a list of available Bible versions
+- `getPreferredVersion`: Get the user's preferred Bible version
+- `setPreferredVersion`: Set the user's preferred Bible version
+- `getDailyVerse`: Get a verse of the day
+- `getReadingPlanItems`: Get reading plan items
+
+### Adding New Bible Versions
+
+To add a new Bible version:
+
+1. Add the version to the `AVAILABLE_VERSIONS` array in `bibleApiService.ts`
+2. Provide the Bible content in the appropriate format (JSON files or database)
+3. Update the `loadBibleContent` function if necessary
+
+## Features
+
+- Track your Bible reading progress
+- View reading streaks and statistics
+- Read Bible content directly in the app
+- Get personalized reading plans
+- Daily verse suggestions
 
 ## Getting Started
 
-1. Install dependencies
+1. Clone the repository
+2. Install dependencies with `npm install`
+3. Start the development server with `npx expo start`
 
-   ```bash
-   npm install
-   ```
+## License
 
-2. Start the app
-
-   ```bash
-    npx expo start
-   ```
-
-In the output, you'll find options to open the app in a:
-- [Development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go)
+This project is licensed under the MIT License.
 
 ## Project Structure
 

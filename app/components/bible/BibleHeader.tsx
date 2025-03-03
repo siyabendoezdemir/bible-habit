@@ -26,14 +26,26 @@ const BibleHeader: React.FC<BibleHeaderProps> = ({
   const fetchVersion = useCallback(async () => {
     try {
       const version = await BibleApiService.getPreferredVersion();
+      console.log(`BibleHeader: Current version is ${version}`);
       setBibleVersion(version);
       
       // Get the full version name if possible
       const versions = await BibleApiService.getAvailableBibles();
+      console.log(`BibleHeader: Fetched ${versions.length} Bible versions`);
+      
       const versionDetails = versions.find(v => v.id === version);
       if (versionDetails) {
-        setVersionName(versionDetails.name);
+        console.log(`BibleHeader: Found version details for ${version}: ${versionDetails.name}`);
+        // Use shortName if available, otherwise fall back to name
+        if (versionDetails.shortName) {
+          console.log(`BibleHeader: Using shortName: ${versionDetails.shortName}`);
+          setVersionName(versionDetails.shortName);
+        } else {
+          console.log(`BibleHeader: No shortName found, using full name: ${versionDetails.name}`);
+          setVersionName(versionDetails.name);
+        }
       } else {
+        console.log(`BibleHeader: No version details found for ${version}, using ID as name`);
         setVersionName(version.toUpperCase());
       }
     } catch (error) {

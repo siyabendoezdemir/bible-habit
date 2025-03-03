@@ -1,4 +1,5 @@
 import { BibleReading } from '../types';
+import * as BibleApiService from './bibleApiService';
 
 // Bible stats - would be calculated from actual reading data in a full implementation
 export const TOTAL_CHAPTERS = 1189;
@@ -52,22 +53,12 @@ export const getChaptersLeftToday = (todayReadings: BibleReading[]) => {
   return Math.max(0, dailyGoal - todayReadings.length);
 };
 
-// Get a verse of the day (this would be from an API in a real implementation)
+// Get a verse of the day
 export const getDailyVerse = () => {
-  return {
-    text: "But seek first his kingdom and his righteousness, and all these things will be given to you as well.",
-    reference: "Matthew 6:33"
-  };
+  return BibleApiService.getDailyVerse();
 };
 
-// Get sample reading plan items
+// Get reading plan items
 export const getReadingPlanItems = () => {
-  return [
-    { book: "Genesis 1-2", description: "Creation", completed: true },
-    { book: "Psalms 1", description: "Blessed is the one", completed: true },
-    { book: "Luke 1", description: "John's birth foretold", completed: true },
-    { book: "John 1", description: "The Word", completed: false },
-    { book: "Exodus 1", description: "Israelites oppressed", completed: false },
-    { book: "1 Samuel 1", description: "Samuel's birth", completed: false }
-  ];
+  return BibleApiService.getReadingPlanItems();
 }; 
